@@ -2,6 +2,8 @@
 cell_type_predictions = {
     'random_forest_models': expand(output + 'models/random-forest-{modality}-trained-on-{selection_procedure}-by-{annotator}.pkl', 
         modality = modalities, selection_procedure = selection_procedures, annotator = annotators),
+    'random_forest_prediction': expand(output + 'rare-subtype-benchmarking/{modality}-{selection-procedure}-annotation-{annotator}-randomForest-predictions.tsv',
+        modality = modalities, selection_procedure = selection_procedures, annotator = annotators),
     'scmap_cluster': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-scmap-cluster-predictions.tsv',
         selection_procedure = selection_procedures, annotator = annotators),
     'scmap_sc': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-scmap-sc-predictions.tsv',

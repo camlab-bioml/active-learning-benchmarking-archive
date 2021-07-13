@@ -1,3 +1,4 @@
 output/*
 *.Rproj
 data/*
+.Rproj.user
