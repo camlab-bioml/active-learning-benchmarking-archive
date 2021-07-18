@@ -49,6 +49,6 @@ rule predict_random_forest:
         test = 'data/{modality}/{modality}-expression-df-test.tsv',
         model = output + 'models/random-forest-{modality}-trained-on-{selection_procedure}-by-{annotator}.pkl'
     output:
-        predictions = output + 'rare-subtype-benchmarking/{modality}-{selection-procedure}-annotation-{annotator}-randomForest-predictions.tsv'
+        predictions = output + 'rare-subtype-benchmarking/{modality}-{selection_procedure}-annotation-{annotator}-randomForest-predictions.tsv'
     script:
         'random-forest-test.py'

@@ -8,6 +8,8 @@ process_data_output = {
 rule split_datasets:
     input:
         rds = 'data/scRNASeq/scRNASeq-full.rds'
+    resources:
+        mem_mb=5000
     output:
         train = 'data/scRNASeq/scRNASeq-train.rds',
         test = 'data/scRNASeq/scRNASeq-test.rds',
