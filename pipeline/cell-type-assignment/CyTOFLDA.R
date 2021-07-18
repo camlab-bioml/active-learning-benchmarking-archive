@@ -5,28 +5,20 @@ suppressPackageStartupMessages({
   source(file.path("CyTOF-Linear-Classifier/", 'CyTOF_LDAtrain.R'))
   source(file.path("CyTOF-Linear-Classifier/", 'CyTOF_LDApredict.R'))
 })
-library(devtools)
-devtools::load_all("../taproom/")
 
-sce_train <- readRDS("data/training/zurich_subset1k.rds")
-labs <- read_csv("data/zurich1_astir_assignments.csv")
-cell_id <- labs$X1
-labs$X1 <- NULL
-labs$cell_type <- get_celltypes(labs)
-labs <- as.data.frame(labs)
-rownames(labs) <- cell_id
+sce_train <- readRDS(snakemake@input[['training_rds']])
 
+labs <- read_tsv(snakemake@input[['labels']])
+labs <- labs %>% column_to_rownames("cell_id")
 
-labs <- select(labs, cell_type)
-
+sce_train <- sce_train[,colnames(sce_train) %in% rownames(labs)]
 sce_train$cell_type <- labs[colnames(sce_train), 'cell_type']
 
-sce_annotate <- sce_train[,1:500]
-sce_train <- sce_train[,501:1000]
-
+sce_annotate <- read_rds(snakemake@input[['annotation_rds']])
 
 data_train <- as.data.frame(t(logcounts(sce_train)))
 data_train$cell_type <- sce_train$cell_type
+
 data_annotate <- as.data.frame(t(logcounts(sce_annotate)))
 
 train_dir <- file.path(tempdir(), "train")
@@ -47,14 +39,15 @@ LDA.Model <- CyTOF_LDAtrain(TrainingSamplesExt = train_dir, TrainingLabelsExt = 
 predictions <- CyTOF_LDApredict(LDA.Model, TestingSamplesExt = annotate_dir,
                                 mode = 'CSV', RejectionThreshold = 0)
 
-predictions <- unlist(Predictions)
+predictions <- unlist(predictions)
 
 df_output <- tibble(
-  cell_id = data_annotate$cell_id,
-  cell_type = Predictions,
-  annotator = args$annotator,
-  cohort = args$cohort,
-  method = args$method
+  cell_id = rownames(data_annotate),
+  predicted_cell_type = predictions,
+  prediction_params = "CyTOF-LDA",
+  selection_procedure = snakemake@wildcards[['selection_procedure']],
+  training_annotator = snakemake@wildcards[['annotator']],
+  modality = 'CyTOF'
 )
 
-write_tsv(df_output, args$output_assignments)
+write_tsv(df_output, snakemake@output[['prediction']])

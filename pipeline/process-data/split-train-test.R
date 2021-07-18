@@ -6,6 +6,10 @@ suppressPackageStartupMessages({
 
 sce <- readRDS(snakemake@input[['rds']])
 
+if(is.null(sce$CellType)){
+  sce$CellType <- sce$cell_type
+}
+
 set.seed(42)
 train <- createDataPartition(sce$CellType, p = 0.5)$Resample1
 
@@ -24,4 +28,5 @@ saveRDS(random_subset, snakemake@output[['random_train']])
 test_labels <- tibble(cell_id = colnames(random_subset), 
                       cell_type = random_subset$CellType)
 
-write_tsv(test_labels, 'data/scRNASeq/random/random-annotation-test.tsv')
+write_tsv(test_labels, paste0('data/', snakemake@wildcards[['modality']], 
+                              '/random/random-annotation-test.tsv'))

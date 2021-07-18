@@ -37,7 +37,7 @@ scmapCluster_results <- scmapCluster(
 
 clustering_prediction <- tibble(cell_id = colnames(annotate_sce),
                                 predicted_cell_type = scmapCluster_results$combined_labs,
-                                prediction_params = 'clusters',
+                                prediction_params = 'scmap-clusters',
                                 selection_procedure = snakemake@wildcards[['selection_procedure']],
                                 training_annotator = snakemake@wildcards[['annotator']],
                                 modality = 'scRNASeq')
@@ -67,7 +67,7 @@ scmapCell_clusters <- scmapCell2Cluster(
 
 sc_prediction <- tibble(cell_id = colnames(annotate_sce),
                         predicted_cell_type = scmapCell_clusters$scmap_cluster_labs,
-                        prediction_params = 'single-cell',
+                        prediction_params = 'scmap-single-cell',
                         selection_procedure = snakemake@wildcards[['selection_procedure']],
                         training_annotator = snakemake@wildcards[['annotator']],
                         modality = 'scRNASeq')

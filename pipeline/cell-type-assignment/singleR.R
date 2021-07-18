@@ -19,7 +19,7 @@ pred <- SingleR(annotate_sce, train_sce, labels = train_sce$CellType)
 
 result <- tibble(cell_id = rownames(pred),
                  predicted_cell_type = pred$labels,
-                 prediction_params = 'labels',
+                 prediction_params = 'singleR-labels',
                  selection_procedure = snakemake@wildcards[['selection_procedure']],
                  training_annotator = snakemake@wildcards[['annotator']],
                  modality = 'scRNASeq')
