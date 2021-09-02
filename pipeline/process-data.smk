@@ -22,6 +22,8 @@ process_data_output = {
 rule split_datasets:
     input:
         rds = 'data/{modality}/{modality}-full.rds'
+    resources:
+        mem_mb=5000
     output:
         train = 'data/{modality}/{modality}-train.rds',
         test = 'data/{modality}/{modality}-test.rds',
