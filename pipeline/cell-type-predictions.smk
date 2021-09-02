@@ -42,6 +42,8 @@ rule train_random_forest:
         annotation = 'data/{modality}/{selection_procedure}/{selection_procedure}-annotation-{annotator}.tsv'
     output:
         model = output + 'models/random-forest-{modality}-trained-on-{selection_procedure}-by-{annotator}.pkl'
+    resources:
+        mem_mb=20000
     log:
         output + 'logs/cell-type-predictions/random-forest-{modality}-trained-on-{selection_procedure}-by-{annotator}.log'
     script:
@@ -51,6 +53,8 @@ rule predict_random_forest:
     input:
         test = 'data/{modality}/{modality}-expression-df-test.tsv',
         model = output + 'models/random-forest-{modality}-trained-on-{selection_procedure}-by-{annotator}.pkl'
+    resources:
+        mem_mb=5000
     output:
         predictions = output + 'rare-subtype-benchmarking/{modality}-{selection_procedure}-annotation-{annotator}-randomForest-predictions.tsv'
     script:
