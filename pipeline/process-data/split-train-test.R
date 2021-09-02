@@ -20,13 +20,13 @@ saveRDS(train_sce, snakemake@output[['train']])
 saveRDS(test_sce, snakemake@output[['test']])
 
 ### random subset of 500 cells
-cell_ids <- sample(1:ncol(train_sce), 500)
-random_subset <- train_sce[,cell_ids]
+# cell_ids <- sample(1:ncol(train_sce), 500)
+# random_subset <- train_sce[,cell_ids]
 
-saveRDS(random_subset, snakemake@output[['random_train']])
+# saveRDS(random_subset, snakemake@output[['random_train']])
 
-test_labels <- tibble(cell_id = colnames(random_subset), 
-                      cell_type = random_subset$CellType)
+# test_labels <- tibble(cell_id = colnames(random_subset), 
+#                       cell_type = random_subset$CellType)
 
-write_tsv(test_labels, paste0('data/', snakemake@wildcards[['modality']], 
-                              '/random/random-annotation-test.tsv'))
+# write_tsv(test_labels, paste0('data/', snakemake@wildcards[['modality']], 
+#                               '/random/random-annotation-test.tsv'))

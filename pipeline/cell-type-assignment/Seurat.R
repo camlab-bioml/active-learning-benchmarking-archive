@@ -11,7 +11,11 @@ unique_markers <- unlist(markers) %>% unique()
 
 
 ### [PROCESS DATA] ###
-seu <- CreateSeuratObject(counts = assays(sce)$counts)
+if(length(names(assays(sce))) == 2){
+  seu <- CreateSeuratObject(counts = assays(sce)$counts)
+} else{
+  seu <- CreateSeuratObject(counts = assays(sce)$logcounts)
+}
 seu <- NormalizeData(seu)
 
 seu <- FindVariableFeatures(seu, selection.method = 'vst', nfeatures = 2000)
@@ -82,8 +86,10 @@ cluster_assignments <- enrichments %>%
 assignments <- left_join(clusters, cluster_assignments) %>% 
   select(cell_id, cell_type, cluster) %>% 
   rename(predicted_cell_type = cell_type) %>%
-  mutate(prediction_params = "Seurat - Cluster annotation - Average expression",
-         modality = "scRNASeq")
+  mutate(prediction_params = paste0("Seurat - Cluster annotation - Average expression - ",
+                                    "max_pca_dim ", snakemake@wildcards[['max_pca_dim']],
+                                    " - resolution ", snakemake@wildcards[['res']]),
+         modality = snakemake@wildcards[['modality']])
 
 assignments %>% 
   select(cell_id, predicted_cell_type, prediction_params, cluster, modality) %>% 

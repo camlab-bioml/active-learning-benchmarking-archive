@@ -10,16 +10,21 @@ train_labels <- read_tsv(snakemake@input[['annotation']]) %>%
   as.data.frame() %>% 
   column_to_rownames('cell_id')
 
-train_sce$cell_type <- train_labels[colnames(train_sce),]
+train_sce$cell_type <- train_labels[colnames(train_sce), 'cell_type']
+
+train_sce <- train_sce[,!is.na(train_sce$cell_type)]
 
 annotate_sce <- readRDS(snakemake@input[['test_data']])
 assays(annotate_sce)$counts <- NULL
 
-pred <- SingleR(annotate_sce, train_sce, labels = train_sce$CellType)
+pred <- SingleR(annotate_sce, train_sce, labels = train_sce$cell_type)
 
 result <- tibble(cell_id = rownames(pred),
                  predicted_cell_type = pred$labels,
-                 prediction_params = 'singleR-labels',
+                 prediction_params = paste0('singleR-labels-iterations_set-', 
+                                            snakemake@wildcards[['set']],
+                                            "-max_dim_pca-", snakemake@wildcards[['pca']],
+                                            "-res-", snakemake@wildcards[['res']]),
                  selection_procedure = snakemake@wildcards[['selection_procedure']],
                  training_annotator = snakemake@wildcards[['annotator']],
                  modality = 'scRNASeq')
