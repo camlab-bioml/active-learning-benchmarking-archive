@@ -1,8 +1,12 @@
-library(HDCytoData)
-library(SingleCellExperiment)
+suppressPackageStartupMessages({
+  library(HDCytoData)
+  library(tidyverse)
+  library(SingleCellExperiment)
+  library(caret)
+})
 
 # Download dataset
-CyTOF <- Levine_32dim_SE()
+CyTOF <- Samusik_all_SE()
 
 # remove non-celltype markers & unassigned cells
 assigned <- CyTOF[rowData(CyTOF)$population_id != "unassigned", 
@@ -20,7 +24,23 @@ sce <- SingleCellExperiment(list(logcounts = t(expression)),
 sce$cell_type <- cell_types
 colnames(sce) <- paste0("Levine_32_", seq(1:ncol(sce)))
 
-saveRDS(sce, snakemake@output[['Levine_CyTOF']])
+subset_types <- c("CLP", "MPP", "CMP", "GMP", "B-cell Frac A-C (pro-B cells)",
+                  "IgM- IgD- B-cells", "IgD- IgMpos B cells")
+
+sce <- sce[, sce$cell_type %in% subset_types]
+
+set.seed(42)
+subset_sce <- sce[, createDataPartition(sce$cell_type, p = 0.1)$Resample1]
+
+# cell_types_remove <- subset_sce$cell_type %>% 
+#   table() %>% 
+#   as_tibble %>% 
+#   filter(n < 15) %>% 
+#   pull(".")
+# 
+# subset_sce <- subset_sce[ , !(subset_sce$cell_type %in% cell_types_remove)]
+
+saveRDS(subset_sce, snakemake@output[['Levine_CyTOF']])
 
 
 

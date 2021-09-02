@@ -13,7 +13,9 @@ annotations <- read_tsv(snakemake@input[['annotation']]) %>%
   column_to_rownames('cell_id')
 
 # Add labels to expression
-train_sce$cell_type1 <- annotations[colnames(train_sce),]
+train_sce$cell_type1 <- annotations[colnames(train_sce), 'cell_type']
+
+train_sce <- train_sce[,!is.na(train_sce$cell_type1)]
 
 # Process data
 rowData(train_sce)$feature_symbol <- rownames(train_sce)
@@ -37,13 +39,16 @@ scmapCluster_results <- scmapCluster(
 
 clustering_prediction <- tibble(cell_id = colnames(annotate_sce),
                                 predicted_cell_type = scmapCluster_results$combined_labs,
-                                prediction_params = 'scmap-clusters',
+                                prediction_params = paste0('scmap-clusters-iterations_set-', 
+                                                           snakemake@wildcards[['set']],
+                                                           "max_dim_pca", snakemake@wildcards[['pca']],
+                                                           "res", snakemake@wildcards[['res']]),
                                 selection_procedure = snakemake@wildcards[['selection_procedure']],
                                 training_annotator = snakemake@wildcards[['annotator']],
                                 modality = 'scRNASeq')
 
-write_tsv(clustering_prediction, snakemake@output[['cluster_predictions']])
 
+write_tsv(clustering_prediction, snakemake@output[['cluster_predictions']])
 
 ### Cell level
 set.seed(1)
@@ -57,7 +62,6 @@ scmapCell_results <- scmapCell(
   )
 )
 
-
 scmapCell_clusters <- scmapCell2Cluster(
   scmapCell_results, 
   list(
@@ -66,8 +70,11 @@ scmapCell_clusters <- scmapCell2Cluster(
 )
 
 sc_prediction <- tibble(cell_id = colnames(annotate_sce),
-                        predicted_cell_type = scmapCell_clusters$scmap_cluster_labs,
-                        prediction_params = 'scmap-single-cell',
+                        predicted_cell_type = scmapCell_clusters$scmap_cluster_labs[,1],
+                        prediction_params = paste0('scmap-sc-iterations_set-',
+                                                   snakemake@wildcards[['set']],
+                                                   "-max_dim_pca-", snakemake@wildcards[['pca']],
+                                                   "-res-", snakemake@wildcards[['res']]),
                         selection_procedure = snakemake@wildcards[['selection_procedure']],
                         training_annotator = snakemake@wildcards[['annotator']],
                         modality = 'scRNASeq')

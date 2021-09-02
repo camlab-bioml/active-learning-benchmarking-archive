@@ -79,16 +79,6 @@ cell_types:
             - TYROBP
             - LYZ
             - S100A12
-            - FCN1
-            - FCGR3A
-            - FCGR3B
-            - ITGAL
-            - ITGAM
-            - CSF3R
-            - CSF1R
-            - CX3CR1
-            - CDKN1C
-            - MS4A7
         negative:
             - FCGR3A
             - FCGR3B
@@ -99,17 +89,31 @@ cell_types:
             - NKG7
             - KLRB1
             - KLRD1
-            - S100A8
-            - S100A9
-            - S100A12
-            - CD14
-            - CD3D
-            - CD3E
-            - CD3G
-            - TRAC
-            - NKG7
-            - KLRB1
-            - KLRD1
+
+    CD16 monocyte:
+      positive:
+        - FCN1
+        - FCGR3A
+        - FCGR3B
+        - ITGAL
+        - ITGAM
+        - CSF3R
+        - CSF1R
+        - CX3CR1
+        - CDKN1C
+        - MS4A7
+      negative:
+        - S100A8
+        - S100A9
+        - S100A12
+        - CD14
+        - CD3D
+        - CD3E
+        - CD3G
+        - TRAC
+        - NKG7
+        - KLRB1
+        - KLRD1
 
     Dendritic cell:
       positive:
@@ -173,18 +177,18 @@ cell_types:
         - CD3E
         - CD3G
 
-    Platelet:
-      positive:
-        - PF4
-        - PPBP
-        - GP5
-        - ITGA2B
-        - NRGN
-        - TUBB1
-        - SPARC
-        - RGS18
-        - MYL9
-        - GNG11
+    # Platelet:
+    #   positive:
+    #     - PF4
+    #     - PPBP
+    #     - GP5
+    #     - ITGA2B
+    #     - NRGN
+    #     - TUBB1
+    #     - SPARC
+    #     - RGS18
+    #     - MYL9
+    #     - GNG11
 
 
 
