@@ -13,10 +13,10 @@ unique_markers <- unlist(markers) %>% unique()
 ### [PROCESS DATA] ###
 if(length(names(assays(sce))) == 2){
   seu <- CreateSeuratObject(counts = assays(sce)$counts)
+  seu <- NormalizeData(seu)
 } else{
   seu <- CreateSeuratObject(counts = assays(sce)$logcounts)
 }
-seu <- NormalizeData(seu)
 
 seu <- FindVariableFeatures(seu, selection.method = 'vst', nfeatures = 2000)
 
