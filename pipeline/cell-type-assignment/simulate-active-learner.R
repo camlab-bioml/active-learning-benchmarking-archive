@@ -47,7 +47,7 @@ for(i in 1:iterations){
 
 # create a list to save all entropies into
 entropies <- list()
-for(i in 1:15){#nrow(df_expression)){
+for(i in 1:nrow(df_expression)){
   # AL selected cells
   AL <- select_cells_classifier(df_expression, unique_markers)
   new_cells <- AL$selected_cells
