@@ -13,10 +13,10 @@ unique_markers <- unlist(markers) %>% unique()
 ### [PROCESS DATA] ###
 if(length(names(assays(sce))) == 2){
   seu <- CreateSeuratObject(counts = assays(sce)$counts)
+  seu <- NormalizeData(seu)
 } else{
   seu <- CreateSeuratObject(counts = assays(sce)$logcounts)
 }
-seu <- NormalizeData(seu)
 
 seu <- FindVariableFeatures(seu, selection.method = 'vst', nfeatures = 2000)
 
@@ -26,8 +26,8 @@ seu <- ScaleData(seu, features = all.genes)
 seu <- RunPCA(seu, features = VariableFeatures(object = seu))
 
 ### [CLUSTERING] ###
-seu <- FindNeighbors(seu, dims = 1:snakemake@params[['max_dim']])
-seu <- FindClusters(seu, resolution  = snakemake@params[['resolution']])
+seu <- FindNeighbors(seu, dims = 1:snakemake@wildcards[['max_pca_dim']])
+seu <- FindClusters(seu, resolution = as.numeric(snakemake@wildcards[['res']]))
 
 # First UMAP viz
 seu <- RunUMAP(seu, dims = 1:10)

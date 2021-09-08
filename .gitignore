@@ -3,3 +3,4 @@ output/*
 data/*
 .Rproj.user
 .snakemake/*
+slurm*
