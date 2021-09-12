@@ -1,5 +1,5 @@
 cell_types:
-    CD4 T cell:
+    CD4+ T cell:
         positive:
             - CD3D
             - CD3E
@@ -41,7 +41,7 @@ cell_types:
             - IGHD
             - IGHM
     
-    Natural Killer Cell:
+    Natural killer cell:
         positive:
             - NCAM1
             - NKG7
@@ -64,7 +64,7 @@ cell_types:
             - CD14
             - TRAC
 
-    CD14 monocyte:
+    CD14+ monocyte:
         positive:
             - VCAN
             - FCN1
@@ -90,7 +90,7 @@ cell_types:
             - KLRB1
             - KLRD1
 
-    CD16 monocyte:
+    CD16+ monocyte:
       positive:
         - FCN1
         - FCGR3A
@@ -158,37 +158,18 @@ cell_types:
         - CD79A
         - CD79B
 
-    Plasma cell:
+    Megakaryocyte:
       positive:
-        - CD38
-        - XBP1
-        - CD27
-        - SLAMF7
-        - IGHA1
-        - IGHA2
-        - IGHG1
-        - IGHG2
-        - IGHG3
-        - IGHG4
-      negative:
-        - CD19
-        - MS4A1
-        - CD3D
-        - CD3E
-        - CD3G
-
-    # Platelet:
-    #   positive:
-    #     - PF4
-    #     - PPBP
-    #     - GP5
-    #     - ITGA2B
-    #     - NRGN
-    #     - TUBB1
-    #     - SPARC
-    #     - RGS18
-    #     - MYL9
-    #     - GNG11
+        - PF4
+        - PPBP
+        - GP5
+        - ITGA2B
+        - NRGN
+        - TUBB1
+        - SPARC
+        - RGS18
+        - MYL9
+        - GNG11
 
 
 

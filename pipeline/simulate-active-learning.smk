@@ -38,3 +38,13 @@ rule subset_training_data:
         split = 'data/{modality}/Active-Learning/Active-Learning-{modality}-annotator-GroundTruth-max_dim-NA-resolution-NA-iterations_set-{subset_val}.tsv'
     script:
         'cell-type-assignment/subset-simulated-active-learner.R'
+
+
+rule AL_with_removed_input:
+    input:
+        markers = 'markers/scRNASeq.yml',
+        expression = 'data/scRNASeq/scRNASeq-train.rds'
+    output:
+        tsv = output + 'AL_with_removed_input/scRNASeq-removed-marker.tsv'
+    script:
+        'benchmarking/remove-cellType-from-ranked-cells.R'
