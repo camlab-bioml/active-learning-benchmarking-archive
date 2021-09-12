@@ -103,3 +103,27 @@ acc_wrap <- function(tt) {
     tryCatch({specificity(tt, annotated_cell_type, predicted_cell_type)}, error=function(e) NULL)
   )
 }
+
+
+cell_type_colours <- function() {
+  pal <- c("#8B5B42", "#AF4EA9", "#FFB60A", "#0AC694", "#0024DD", "#6CC1FF",
+           "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d")
+  
+  celltype_colours <- c(
+    "B cell" = pal[2],
+    "Cytotoxic T cell" = pal[3],
+    "CD4+ T cell" = pal[12],
+    "CD16+ monocyte" = pal[4],
+    "Dendritic cell" = pal[5],
+    "Plasmacytoid dendritic cell" = pal[6],
+    "CD14+ monocyte" = pal[8], 
+    "Megakaryocyte" = pal[9],
+    "Natural killer cell" = pal[10]
+  )
+  celltype_colours
+}
+
+
+whatsthatcell_theme <- function(){
+  theme_bw()
+}
