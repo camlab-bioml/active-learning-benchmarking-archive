@@ -3,6 +3,7 @@ process_data_output = {
     'train_test_split': expand('data/{modality}/{modality}-{split}.rds', modality = modalities, split = data_splits),
     'scRNA_expression_df': expand('data/{modality}/{modality}-expression-df-{split}.tsv', modality = modalities, split = data_splits),
     'CyTOF_download': 'data/CyTOF/CyTOF-full.rds',
+    'dataset_dimensionality': output + 'reports/dataset-dimensionality.html',
 
     # Random subsets
     'sce_subset1': expand('data/{modality}/random/random-{modality}-set1.rds', modality = modalities),
@@ -47,6 +48,15 @@ rule download_CyTOF:
         'process-data/download-and-process-CyTOF.R'
 
 
+rule determine_dataset_dimensionality:
+    input:
+        markers = 'markers/{modality}.yml',
+        training_rds = 'data/{modality}/{modality}-train.rds'
+    output:
+        html = output + 'reports/dataset-dimensionality.html'
+    script:
+        'process-data/determine-dataset-dimensionality.Rmd'
+
 rule create_random_subsets:
     input:
         sce = 'data/{modality}/{modality}-train.rds'
@@ -70,3 +80,5 @@ rule create_clustering_subsets:
         sce = 'data/{modality}/Seurat-clustering/Seurat-clustering-{modality}-max_dim-{pca_max_dim}-resolution-{res}.rds'
     script:
         'process-data/select-cluster-subset.R'
+
+
