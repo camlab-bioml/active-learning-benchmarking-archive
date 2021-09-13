@@ -1,0 +1,77 @@
+---
+title: "Determine Seurat parameters"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Seurat)
+library(SingleCellExperiment)
+library(yaml)
+library(tidyverse)
+```
+
+
+```{r message=F}
+### [READ IN FILES] ###
+sce <- readRDS(snakemake@input[['training_rds']])
+markers <- read_yaml(snakemake@input[['markers']])$cell_types
+unique_markers <- unlist(markers) %>% unique()
+
+
+### [PROCESS DATA] ###
+if(length(names(assays(sce))) == 2){
+  seu <- CreateSeuratObject(counts = assays(sce)$counts)
+  seu <- NormalizeData(seu)
+} else{
+  seu <- CreateSeuratObject(counts = assays(sce)$logcounts)
+}
+
+seu <- FindVariableFeatures(seu, selection.method = 'vst', nfeatures = 2000)
+
+all.genes <- rownames(seu)
+seu <- ScaleData(seu, features = all.genes)
+
+
+seu <- RunPCA(seu, features = VariableFeatures(object = seu))
+```
+
+
+### Which PC's contain what marker genes?
+```{r}
+t <- print(seu[["pca"]], dims = 1:10, nfeatures = 10)
+
+```
+
+
+### Plot loadings
+```{r fig.height=17, fig.width=10}
+VizDimLoadings(seu, dims = 1:10, reduction = "pca")
+
+```
+
+
+### Dim heatmaps
+```{r fig.height=25, fig.width=9}
+DimHeatmap(seu, dims = 1:27, cells = 500, balanced = TRUE)
+```
+
+
+### JackStraw
+
+```{r}
+seu <- JackStraw(seu, num.replicate = 100, dims = 40)
+seu <- ScoreJackStraw(seu, dims = 1:40)
+```
+
+```{r}
+JackStrawPlot(seu, dims = 1:40)
+```
+
+### Elbowplot
+```{r}
+ElbowPlot(seu, ndims = 40)
+```
+
+
+
