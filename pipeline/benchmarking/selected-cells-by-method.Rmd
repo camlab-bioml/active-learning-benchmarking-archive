@@ -1,0 +1,90 @@
+---
+title: "Selected cell types across selection methods"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(SingleCellExperiment)
+source("../../pipeline/whatsthatcell-helpers.R")
+```
+
+
+
+```{r message = F}
+random_files <- list.files("../../data/scRNASeq/random/", pattern = "scRNASeq-anno", full.names = TRUE)
+random <- lapply(1:3, function(x){
+  df <- read_tsv(random_files[x])
+  df$set <- x
+  df
+}) %>%  bind_rows()
+
+Seurat_files <- list.files("../../data/scRNASeq/Seurat-clustering/", pattern = "scRNASeq-anno", full.names = TRUE)
+Seurat <- lapply(1:12, function(x){
+  df <- read_tsv(Seurat_files[x])
+  df$set <- x
+  df
+}) %>%  bind_rows()
+
+AL <- read_tsv("../../data/scRNASeq/Active-Learning/Active-Learning-annotation-GroundTruth.tsv")
+AL <- AL %>% 
+  arrange(iteration)
+AL <- AL[1:500,]
+
+sce <- readRDS("../../data/scRNASeq/scRNASeq-train.rds")
+dataset <- tibble(cell_id = colnames(sce),
+                  cell_type = sce$CellType)
+```
+
+
+```{r}
+random_count <- random %>% 
+  group_by(set, cell_type) %>% 
+  tally() %>% 
+  mutate(selection = "random")
+  # ggplot(aes(x = set, y = n, fill = cell_type)) +
+  # geom_bar(stat = 'identity', position = 'fill') +
+  # scale_fill_manual(values = cell_type_colours()) +
+  # whatsthatcell_theme()
+
+Seurat_count <- Seurat %>% 
+  group_by(set, cell_type) %>% 
+  tally() %>% 
+  mutate(selection = "seurat")
+  # ggplot(aes(x = set, y = n, fill = cell_type)) +
+  # geom_bar(stat = 'identity', position = 'fill') +
+  # scale_fill_manual(values = cell_type_colours()) +
+  # whatsthatcell_theme()
+
+AL_count <- AL %>% 
+  group_by(cell_type) %>% 
+  tally() %>% 
+  mutate(selection = "Active-Learning") %>% 
+  mutate(set = 1)
+
+# ggplot(aes(x = set, y = n, fill = cell_type)) +
+#   geom_bar(stat = 'identity', position = 'fill') +
+#   scale_fill_manual(values = cell_type_colours()) +
+#   whatsthatcell_theme()
+
+dataset_frequencies <- dataset %>% 
+  group_by(cell_type) %>% 
+  tally() %>% 
+  mutate(selection = "full-training-dataset", set = 1)
+  
+  
+bind_rows(random_count, Seurat_count, AL_count, dataset_frequencies) %>% 
+  ggplot(aes(x = set, y = n, fill = cell_type)) +
+  geom_bar(stat = 'identity', position = 'fill') +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() +
+  facet_wrap(~selection, scales = "free_x", nrow = 1)
+
+bind_rows(random_count, Seurat_count, AL_count) %>% 
+  ggplot(aes(x = set, y = n, fill = cell_type)) +
+  geom_bar(stat = 'identity') +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() +
+  facet_wrap(~selection, scales = "free_x")
+```
