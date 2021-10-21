@@ -1,0 +1,89 @@
+---
+title: "Compare ground truth to predicted"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggalluvial)
+source("pipeline/whatsthatcell-helpers.R")
+```
+
+
+```{r}
+### [ LOAD GROUND TRUTH ] #####
+scRNAseq <- readRDS("data/scRNASeq/scRNASeq-test.rds")#snakemake@input[['sce']])
+scRNAseq_gt <- tibble(cell_id = colnames(scRNAseq),
+                      ground_truth = scRNAseq$CellType)
+
+###  [ LOAD PREDICTIONS ] #####
+AL_files <- list.files("output/v1/rare-subtype-benchmarking/", 
+                       pattern = "scRNASeq-Active-Learning-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-14",
+                       full.names = TRUE)
+
+Seurat_files <- list.files("output/v1/rare-subtype-benchmarking/",
+                           pattern = "scRNASeq-Seurat",
+                           full.names = TRUE)
+random_files <- list.files("output/v1/rare-subtype-benchmarking/",
+                           pattern = "scRNASeq-random",
+                           full.names = TRUE)
+
+AL <- lapply(AL_files, read_tsv) %>% 
+  bind_rows()
+Seurat <- lapply(Seurat_files, read_tsv) %>% 
+  bind_rows()
+random <- lapply(random_files, read_tsv) %>% 
+  bind_rows()
+
+predictions <- bind_rows(AL, Seurat, random) %>% 
+  left_join(scRNAseq_gt)
+split_params <- str_split_fixed(predictions$prediction_params, "-", 3)
+predictions$method <- paste0(split_params[,1], "-", split_params[,2])
+predictions$simple_params <- split_params[,3]
+```
+
+
+```{r}
+predictions %>% 
+  filter(selection_procedure == 'Active-Learning') %>% 
+  pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+  ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+  geom_stratum() +
+  geom_flow() +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() +
+  facet_wrap(~ method) + 
+  labs(x = "", y = "cell", title = "Active Learning") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r fig.width=8, fig.height=9}
+predictions %>% 
+  filter(selection_procedure == 'random') %>% 
+  pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+  ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+  geom_stratum() +
+  geom_flow() +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() + 
+  facet_grid(simple_params ~ method) +
+  labs(x = "", y = "cell", title = "Random selection") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r fig.height=20, fig.width=9}
+predictions %>% 
+  filter(selection_procedure == 'Seurat-clustering') %>% 
+  pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+  ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+  geom_stratum() +
+  geom_flow() +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() + 
+  facet_grid(simple_params ~ method) +
+  labs(x = "", y = "cell", title = "Seurat-clustering") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+
