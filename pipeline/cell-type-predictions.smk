@@ -5,13 +5,11 @@ selection_expansion_dict = {
                         'set': ['NA']},
     'random': {'neighbors': ['NA'],
                'res': ['NA'],
-               'set': ['set1', 'set2', 'set3']},
+               'set': random_sets},
     'Active-Learning': {'neighbors': ['NA'],
                'res': ['NA'],
                'set': list(range(15))}
 }
-
-scRNASeq_methods = ['scmap-cluster', 'scmap-sc', 'singleR']
 
 scRNA_predictions = []
 scRNA = [expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-{method}-predictions.tsv',

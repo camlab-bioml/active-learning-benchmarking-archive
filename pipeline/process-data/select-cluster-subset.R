@@ -20,7 +20,7 @@ sce_subset <- sce[, colnames(sce) %in% subset]
 gt <- tibble(cell_id = colnames(sce_subset),
              cell_type = sce_subset$CellType,
              method = "Seurat-clustering",
-             params = paste0("max_dim_pca-", snakemake@wildcards[['pca_max_dim']], "-resolution-", snakemake@wildcards[['res']]))
+             params = paste0("knn-", snakemake@wildcards[['neighbors']], "-res-", snakemake@wildcards[['res']]))
 
 
 saveRDS(sce_subset, snakemake@output[['sce']])

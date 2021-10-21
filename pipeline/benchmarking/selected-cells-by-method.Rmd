@@ -1,10 +1,17 @@
 ---
 title: "Selected cell types across selection methods"
 output: html_document
+params:
+  markers: "../../markers/scRNASeq.yml"
+  random_files: ""
+  seurat_files: ""
+  AL_file: "../../data/scRNASeq/Active-Learning/Active-Learning-annotation-GroundTruth.tsv"
+  sce: "../../data/scRNASeq/scRNASeq-train.rds"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
 suppressPackageStartupMessages({
   library(tidyverse)
   library(SingleCellExperiment)
@@ -18,35 +25,34 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 
 ```{r message = F}
-markers <- read_yaml("../../markers/scRNASeq.yml")$cell_types %>% 
+markers <- read_yaml(params$markers)$cell_types %>% 
   unlist() %>% unique()
 
-random_files <- list.files("../../data/scRNASeq/random/", pattern = "scRNASeq-anno", full.names = TRUE)
-random <- lapply(1:3, function(x){
-  df <- read_tsv(random_files[x])
-  df$set <- x
-  df
-}) %>%  bind_rows()
+random_files <- str_split(params$random_files, " ")[[1]]
+random <- lapply(random_files, read_tsv) %>%  
+  bind_rows() %>% 
+  mutate(set = as.character(set))
+head(random)
 
-Seurat_files <- list.files("../../data/scRNASeq/Seurat-clustering/", pattern = "scRNASeq-anno", full.names = TRUE)
-Seurat <- lapply(1:12, function(x){
-  df <- read_tsv(Seurat_files[x])
-  df$set <- x
-  df
-}) %>%  bind_rows()
+seurat_files <- str_split(params$seurat_files, " ")[[1]]
+Seurat <- lapply(seurat_files, read_tsv) %>%  
+  bind_rows() %>% 
+  dplyr::rename("set" = "params") %>% 
+  mutate(set = as.character(set))
+head(Seurat)
 
-AL <- read_tsv("../../data/scRNASeq/Active-Learning/Active-Learning-annotation-GroundTruth.tsv")
+AL <- read_tsv(params$AL_file)
 AL <- AL %>% 
   arrange(iteration)
 AL <- AL[1:500,]
 
-sce <- readRDS("../../data/scRNASeq/scRNASeq-train.rds")
+sce <- readRDS(params$sce)
 dataset <- tibble(cell_id = colnames(sce),
                   cell_type = sce$CellType)
 ```
 
 
-```{r}
+```{r fig.width = 10, fig.height = 7}
 random_count <- random %>% 
   group_by(set, cell_type) %>% 
   tally() %>% 
@@ -63,14 +69,13 @@ AL_count <- AL %>%
   group_by(cell_type) %>% 
   tally() %>% 
   mutate(selection = "Active-Learning") %>% 
-  mutate(set = 1)
+  mutate(set = "1")
 
 
 dataset_frequencies <- dataset %>% 
   group_by(cell_type) %>% 
   tally() %>% 
-  mutate(selection = "full-training-dataset", set = 1)
-  
+  mutate(selection = "full-training-dataset", set = "1")
   
 bind_rows(random_count, Seurat_count, AL_count, dataset_frequencies) %>% 
   ggplot(aes(x = set, y = n, fill = cell_type)) +
