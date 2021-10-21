@@ -140,6 +140,45 @@ acc_wrap <- function(tt) {
 }
 
 
+### [ PLOTTING ] ####
+createHeatmap <- function(sce,
+                          cell_type_column = "cell_type",
+                          assay = "logcounts",
+                          thresh = 2,
+                          title = NULL) {
+  
+  lc <- t(as.matrix(assay(sce, assay)))
+  lc <- scale(lc)
+  keep_cols <- apply(lc, 2, function(x) all(is.na(x) == FALSE)) %>% as.vector
+  lc <- lc[, keep_cols]
+  
+  lc[lc > thresh] <- thresh
+  lc[lc < -thresh] <- -thresh
+  
+  cell_types = colData(sce)[[ cell_type_column ]]
+  
+  celltype_annot <- HeatmapAnnotation(`Cell type` = cell_types, 
+                                      which="column",
+                                      col = list(`Cell type` = cell_type_colours()))  
+  
+  if(is.null(title)){
+    title <- title
+  }else{
+    title <- paste(title, "\nCell")
+  }
+  
+  type_exprs <- Heatmap(t(lc), 
+                        name = "Expression",
+                        column_title = title,
+                        col=viridis(100),
+                        top_annotation = celltype_annot,
+                        show_column_names = FALSE,
+                        column_order = order(cell_types))
+  type_exprs
+}
+
+
+
 cell_type_colours <- function() {
   pal <- c("#8B5B42", "#AF4EA9", "#FFB60A", "#0AC694", "#0024DD", "#6CC1FF",
            "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d")
@@ -163,3 +202,6 @@ cell_type_colours <- function() {
 whatsthatcell_theme <- function(){
   theme_bw()
 }
+
+
+
