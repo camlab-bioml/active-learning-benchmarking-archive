@@ -47,7 +47,6 @@ t <- print(seu[["pca"]], dims = 1:10, nfeatures = 10)
 ### Plot loadings
 ```{r fig.height=17, fig.width=10}
 VizDimLoadings(seu, dims = 1:10, reduction = "pca")
-
 ```
 
 
@@ -60,17 +59,17 @@ DimHeatmap(seu, dims = 1:27, cells = 500, balanced = TRUE)
 ### JackStraw
 
 ```{r}
-seu <- JackStraw(seu, num.replicate = 100, dims = 40)
-seu <- ScoreJackStraw(seu, dims = 1:40)
+seu <- JackStraw(seu, num.replicate = 100, dims = 38)
+seu <- ScoreJackStraw(seu, dims = 1:38)
 ```
 
 ```{r}
-JackStrawPlot(seu, dims = 1:40)
+JackStrawPlot(seu, dims = 1:38)
 ```
 
 ### Elbowplot
 ```{r}
-ElbowPlot(seu, ndims = 40)
+ElbowPlot(seu, ndims = 38)
 ```
 
 
