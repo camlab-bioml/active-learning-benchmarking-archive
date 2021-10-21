@@ -11,17 +11,17 @@ subset3 <- sce[, sample(1:ncol(sce), 500)]
 
 
 gt_1 <- tibble(cell_id = colnames(subset1),
-               gt_cell_type = subset1$CellType,
+               cell_type = subset1$CellType,
                method = "random",
                set = "Set1")
 
 gt_2 <- tibble(cell_id = colnames(subset2),
-               gt_cell_type = subset2$CellType,
+               cell_type = subset2$CellType,
                method = "random",
                set = "Set2")
 
 gt_3 <- tibble(cell_id = colnames(subset3),
-               gt_cell_type = subset3$CellType,
+               cell_type = subset3$CellType,
                method = "random",
                set = "Set3")
 

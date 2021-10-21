@@ -1,7 +1,7 @@
 
 
 viz = {
-    'AL_iterations': expand(output + 'figures/AL-benchmarking/Active-Learning-accuracy-by-training-iteration-{modality}.pdf', modality = ['scRNASeq'])
+    #'AL_iterations': expand(output + 'figures/AL-benchmarking/Active-Learning-accuracy-by-training-iteration-{modality}.pdf', modality = ['scRNASeq'])
 }
 
 

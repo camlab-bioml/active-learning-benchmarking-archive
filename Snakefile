@@ -13,6 +13,10 @@ annotators = ['GroundTruth']
 modalities = ['scRNASeq', 'CyTOF']
 data_splits = ['train', 'test']
 
+# Seurat params
+Seurat_neighbors = [10,20,30]
+Seurat_resolution = [0.4,0.8,1.2]
+
 with open(r'markers/scRNASeq.yml') as file:
     cell_types = yaml.full_load(file)
 

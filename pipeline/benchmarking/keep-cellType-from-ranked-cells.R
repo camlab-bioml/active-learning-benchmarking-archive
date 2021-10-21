@@ -20,8 +20,8 @@ ground_truth <- tibble(cell_id = rownames(colData(sce)),
                        cell_type = sce$CellType)
 
 
-remove_marker_AL <- function(markers, remove_index, df_expression, ground_truth){
-  subset_markers <- markers$cell_types[-remove_index]
+remove_marker_AL <- function(markers, df_expression, ground_truth){
+  subset_markers <- markers$cell_types
   
   # Get list of cell types
   all_cell_types <- names(subset_markers)
@@ -38,9 +38,6 @@ remove_marker_AL <- function(markers, remove_index, df_expression, ground_truth)
     }
   }
   
-  # If any cell types have been assigned to the removed cell type make them NA again
-  df_expression$cell_type[which(df_expression$cell_type == names(markers$cell_types[remove_index]))] <- NA
-  
   for(i in 1:20){
     AL <- active_learning_wrapper(df_expression, unique_markers, i)
     df_expression <- AL$expression
@@ -49,7 +46,7 @@ remove_marker_AL <- function(markers, remove_index, df_expression, ground_truth)
   df_expression %>% 
     filter(!is.na(cell_type)) %>% 
     select(X1, iteration, cell_type, gt_cell_type) %>% 
-    mutate(removed_markers = names(markers$cell_types[remove_index])) %>%
+    mutate(removed_markers = "all-kept") %>%
     mutate(seed = snakemake@wildcards[['seed']])
 }
 
@@ -60,11 +57,8 @@ cell_subset <- df_expression$X1[createDataPartition(df_expression$gt_cell_type, 
 
 df <- filter(df_expression, X1 %in% cell_subset)
 gt <- filter(ground_truth, cell_id %in% cell_subset)
-
-AL_removed <- lapply(1:length(markers$cell_types), function(x){
-  remove_marker_AL(markers, x, df, ground_truth)
-}) %>% 
-  bind_rows()
+#save.image('debug')
+AL_removed <- remove_marker_AL(markers, df, gt)
 
 write_tsv(AL_removed, snakemake@output[['tsv']])
 

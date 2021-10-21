@@ -30,18 +30,10 @@ iterations <- ((nrow(df_expression) - 2*length(all_cell_types)) / length(all_cel
 ### [ RANKED CELL TYPE ASSIGNMENT ] #####
 for(i in 1:iterations){
   # Get initial set of cells based on their marker expression ranking
-  ranked_cells <- select_initial_cells(df_expression, markers$cell_types)
-  
-  # What index do the selected cells correspond to?
-  to_assign_index <- match(ranked_cells, df_expression$X1)
-  
-  df_expression$cell_type[to_assign_index] <- df_expression$gt_cell_type[to_assign_index]
-  # Get ground truth labels based on the index
-  #assignment <- ground_truth$cell_type[match(ranked_cells, ground_truth$cell_id)]
-  #df_expression$cell_type[to_assign_index] <- assignment
-  df_expression$iteration <- 0
+  df_expression <- cell_ranking_wrapper(df_expression, markers)
   
   if(all(all_cell_types %in% unique(df_expression$cell_type))){
+    print('ranking done')
     break
   }
 }
@@ -51,19 +43,10 @@ for(i in 1:iterations){
 # create a list to save all entropies into
 entropies <- list()
 for(i in 1:nrow(df_expression)){
-  # AL selected cells
-  AL <- select_cells_classifier(df_expression, unique_markers)
-  new_cells <- AL$selected_cells
-  entropies[[length(entropies) + 1]] <- AL$entropy_table
-  
-  # What index do the selected cells correspond to?
-  to_assign_index <- match(new_cells, df_expression$X1)
-  # Get ground truth labels based on the index
-  df_expression$cell_type[to_assign_index] <- df_expression$gt_cell_type[to_assign_index]
-  #assignment <- ground_truth$cell_type[match(new_cells, ground_truth$cell_id)]
-  
-  #df_expression$cell_type[to_assign_index] <- assignment
-  df_expression$iteration[to_assign_index] <- i
+  AL <- active_learning_wrapper(df_expression, unique_markers, i, entropies)
+
+  df_expression <- AL$expression
+  entropies <- AL$entropies
   
   not_annotated <- filter(df_expression, is.na(cell_type)) %>% 
     nrow()

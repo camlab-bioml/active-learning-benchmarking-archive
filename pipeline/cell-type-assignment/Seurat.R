@@ -11,10 +11,12 @@ unique_markers <- unlist(markers) %>% unique()
 
 
 ### [PROCESS DATA] ###
-if(length(names(assays(sce))) == 2){
+if(snakemake@wildcards[['modality']] == 'scRNASeq'){
+  # Normalize scRNASeq data
   seu <- CreateSeuratObject(counts = assays(sce)$counts)
   seu <- NormalizeData(seu)
 } else{
+  # CyTOF is already normalized
   seu <- CreateSeuratObject(counts = assays(sce)$logcounts)
 }
 
@@ -26,8 +28,9 @@ seu <- ScaleData(seu, features = all.genes)
 seu <- RunPCA(seu, features = VariableFeatures(object = seu))
 
 ### [CLUSTERING] ###
-seu <- FindNeighbors(seu, dims = 1:snakemake@params[['max_dim']])
-seu <- FindClusters(seu, resolution  = snakemake@params[['resolution']])
+n_of_pcs <- 30
+seu <- FindNeighbors(seu, dims = 1:n_of_pcs, k.param = as.integer(snakemake@wildcards[['neighbors']]))#snakemake@wildcards[['max_pca_dim']])
+seu <- FindClusters(seu, resolution = as.numeric(snakemake@wildcards[['res']]))
 
 # First UMAP viz
 seu <- RunUMAP(seu, dims = 1:10)
@@ -54,12 +57,14 @@ expression <- expression[, c('cell_id', unique_markers)] %>%
 
 # Calculate enrichments for each cell type/cluster
 enrichments <- lapply(1:length(markers), function(x){
+  # Positive enrichment
   p <- expression[, c(markers[[x]]$positive, 'cluster')] %>% 
     pivot_longer(-cluster, names_to = "marker", values_to = "expression") %>% 
     group_by(cluster) %>% 
     summarize(mean = mean(expression))
   
   if(!is.null(markers[[x]]$negative)){
+    # If this cell types has negative markers - calculate negative enrichment
     n <- expression[, c(markers[[x]]$negative, 'cluster')] %>% 
       pivot_longer(-cluster, names_to = "marker", values_to = "expression") %>% 
       group_by(cluster) %>% 
@@ -87,7 +92,8 @@ assignments <- left_join(clusters, cluster_assignments) %>%
   select(cell_id, cell_type, cluster) %>% 
   rename(predicted_cell_type = cell_type) %>%
   mutate(prediction_params = paste0("Seurat - Cluster annotation - Average expression - ",
-                                    "max_pca_dim ", snakemake@wildcards[['max_pca_dim']],
+                                    "pca ", n_of_pcs,
+                                    " neighbors ", snakemake@wildcards[['neighbors']],
                                     " - resolution ", snakemake@wildcards[['res']]),
          modality = snakemake@wildcards[['modality']])
 
