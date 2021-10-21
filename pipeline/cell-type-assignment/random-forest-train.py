@@ -21,11 +21,18 @@ RSEED = 42
 steps = [('Scale', StandardScaler()), ('pca', PCA()), ('RandomForest', RandomForestClassifier())]
 pipeline = Pipeline(steps)
 
-parameters = {
-    'pca__n_components': [100, 450],
-    'RandomForest__max_features': [2, 4, 6, 10],
-    'RandomForest__n_estimators': [50, 100, 150]
-}
+if snakemake.wildcards['modality'] == 'scRNASeq':
+    parameters = {
+        'pca__n_components': [100, 450],
+        'RandomForest__max_features': [2, 4, 6, 10],
+        'RandomForest__n_estimators': [50, 100, 150]
+    }
+else:
+    parameters = {
+        'pca__n_components': [int(round(len(X_train.columns) / 2), 0), int(len(X_train.columns))],
+        'RandomForest__max_features': [2, 4, 6, 10],
+        'RandomForest__n_estimators': [50, 100, 150]
+    }
 
 print("starting grid search")
 grid = GridSearchCV(pipeline, param_grid=parameters, cv=10, return_train_score=True)

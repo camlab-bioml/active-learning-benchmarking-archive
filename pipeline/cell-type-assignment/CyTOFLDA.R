@@ -2,8 +2,8 @@ suppressPackageStartupMessages({
   library(scater)
   library(SingleCellExperiment)
   library(tidyverse)
-  source(file.path("CyTOF-Linear-Classifier/", 'CyTOF_LDAtrain.R'))
-  source(file.path("CyTOF-Linear-Classifier/", 'CyTOF_LDApredict.R'))
+  source(file.path("utils/", 'CyTOF_LDAtrain.R'))
+  source(file.path("utils/", 'CyTOF_LDApredict.R'))
 })
 
 sce_train <- readRDS(snakemake@input[['training_rds']])
