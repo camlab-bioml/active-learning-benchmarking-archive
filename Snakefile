@@ -7,6 +7,7 @@ configfile: 'config/config.yml'
 output = 'output/' + config['version'] + '/'
 
 selection_procedures = ['random', 'Seurat-clustering', 'Active-Learning']
+scRNASeq_methods = ['scmap-cluster', 'scmap-sc', 'singleR']
 training_set_AL_simulation = 15
 AL_annotator = ['GroundTruth-' + str(x) for x in range(training_set_AL_simulation)]
 annotators = ['GroundTruth']
@@ -16,6 +17,8 @@ data_splits = ['train', 'test']
 # Seurat params
 Seurat_neighbors = [10,20,30]
 Seurat_resolution = [0.4,0.8,1.2]
+
+random_sets = ['set1', 'set2', 'set3']
 
 with open(r'markers/scRNASeq.yml') as file:
     cell_types = yaml.full_load(file)
