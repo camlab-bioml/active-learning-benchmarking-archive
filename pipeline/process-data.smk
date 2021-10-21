@@ -3,7 +3,7 @@ process_data_output = {
     'train_test_split': expand('data/{modality}/{modality}-{split}.rds', modality = modalities, split = data_splits),
     'scRNA_expression_df': expand('data/{modality}/{modality}-expression-df-{split}.tsv', modality = modalities, split = data_splits),
     'CyTOF_download': 'data/CyTOF/CyTOF-full.rds',
-    'dataset_dimensionality': output + 'reports/dataset-dimensionality.html',
+    'dataset_dimensionality': output + 'reports/dataset-dimensionality.html', 
 
     # Random subsets
     'sce_subset1': expand('data/{modality}/random/random-{modality}-set1.rds', modality = modalities),

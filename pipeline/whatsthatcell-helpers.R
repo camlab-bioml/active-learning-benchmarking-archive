@@ -118,7 +118,8 @@ cell_type_colours <- function() {
     "Plasmacytoid dendritic cell" = pal[6],
     "CD14+ monocyte" = pal[8], 
     "Megakaryocyte" = pal[9],
-    "Natural killer cell" = pal[10]
+    "Natural killer cell" = pal[10],
+    'unassigned' = "grey60"
   )
   celltype_colours
 }

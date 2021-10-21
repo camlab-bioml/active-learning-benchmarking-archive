@@ -65,7 +65,7 @@ seu <- ScoreJackStraw(seu, dims = 1:40)
 ```
 
 ```{r}
-JackStrawPlot(seu, dims = 1:40)
+# JackStrawPlot(seu, dims = 1:40)
 ```
 
 ### Elbowplot
