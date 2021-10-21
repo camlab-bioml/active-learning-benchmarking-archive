@@ -1,4 +1,6 @@
 ### [ WHATSTHATCELL FUNCTIONS ] #####
+
+### [ ACTIVE LEARNING ] #####
 select_initial_cells <- function(df_expression,
                                  marker_dict,
                                  number_cells = 2) {
@@ -89,6 +91,39 @@ select_cells_classifier <- function(df_expression, markers, amount = 10) {
 }
 
 
+cell_ranking_wrapper <- function(df, markers){
+  # Get initial set of cells based on their marker expression ranking
+  ranked_cells <- select_initial_cells(df, markers$cell_types)
+  
+  # What index do the selected cells correspond to?
+  to_assign_index <- match(ranked_cells, df$X1)
+  df$cell_type[to_assign_index] <- df$gt_cell_type[to_assign_index]
+  df$iteration <- 0
+
+  df
+}
+
+
+active_learning_wrapper <- function(df, unique_markers, iteration, entropies = NULL){
+  # AL selected cells
+  AL <- select_cells_classifier(df, unique_markers)
+  new_cells <- AL$selected_cells
+  
+  if(!is.null(entropies)){
+    entropies[[length(entropies) + 1]] <- AL$entropy_table
+  }
+  
+  # What index do the selected cells correspond to?
+  to_assign_index <- match(new_cells, df$X1)
+  
+  # Get ground truth labels based on the index
+  df$cell_type[to_assign_index] <- df$gt_cell_type[to_assign_index]
+  df$iteration[to_assign_index] <- iteration
+
+  list(expression = df, entropies = entropies)
+}
+
+### [ ACCURACIES ] #####
 acc_wrap <- function(tt) {
   cell_types <- unique(union(tt$predicted_cell_type, tt$annotated_cell_type))
   

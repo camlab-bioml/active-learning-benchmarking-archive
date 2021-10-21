@@ -2,6 +2,7 @@ library(tidyverse)
 library(yaml)
 library(data.table)
 library(caret)
+library(SingleCellExperiment)
 source("pipeline/whatsthatcell-helpers.R")
 
 
@@ -30,49 +31,38 @@ remove_marker_AL <- function(markers, remove_index, df_expression, ground_truth)
   
   for(i in 1:iterations){
     # Get initial set of cells based on their marker expression ranking
-    ranked_cells <- select_initial_cells(df_expression, subset_markers)
-    
-    # What index do the selected cells correspond to?
-    to_assign_index <- match(ranked_cells, df_expression$X1)
-    
-    # Get ground truth labels based on the index
-    assignment <- df_expression$gt_cell_type[to_assign_index]
-    
-    df_expression$cell_type[to_assign_index] <- assignment
-    df_expression$iteration[to_assign_index] <- 0
+    df_expression <- cell_ranking_wrapper(df_expression, markers)
 
     if(all(all_cell_types %in% unique(df_expression$cell_type))){
       break
     }
   }
   
-  
   # If any cell types have been assigned to the removed cell type make them NA again
   df_expression$cell_type[which(df_expression$cell_type == names(markers$cell_types[remove_index]))] <- NA
   
   for(i in 1:20){
-    # AL selected cells
-    AL <- select_cells_classifier(df_expression, unique_markers)
-    new_cells <- AL$selected_cells
-    
-    # What index do the selected cells correspond to?
-    to_assign_index <- match(new_cells, df_expression$X1)
-    # Get ground truth labels based on the index
-    assignment <- ground_truth$cell_type[match(new_cells, ground_truth$cell_id)]
-    
-    df_expression$cell_type[to_assign_index] <- assignment
-    df_expression$iteration[to_assign_index] <- i
+    AL <- active_learning_wrapper(df_expression, unique_markers, i)
+    df_expression <- AL$expression
   }
   
   df_expression %>% 
     filter(!is.na(cell_type)) %>% 
     select(X1, iteration, cell_type, gt_cell_type) %>% 
-    mutate(removed_markers = names(markers$cell_types[remove_index]))
+    mutate(removed_markers = names(markers$cell_types[remove_index])) %>%
+    mutate(seed = snakemake@wildcards[['seed']])
 }
 
 
+set.seed(as.integer(snakemake@wildcards[['seed']]))
+
+cell_subset <- df_expression$X1[createDataPartition(df_expression$gt_cell_type, p = 0.3)$Resample1]
+
+df <- filter(df_expression, X1 %in% cell_subset)
+gt <- filter(ground_truth, cell_id %in% cell_subset)
+
 AL_removed <- lapply(1:length(markers$cell_types), function(x){
-  remove_marker_AL(markers, x, df_expression, ground_truth)
+  remove_marker_AL(markers, x, df, ground_truth)
 }) %>% 
   bind_rows()
 

@@ -1,12 +1,12 @@
 
 selection_expansion_dict = {
-    'Seurat-clustering': {'pca': [10,12,15],
-                        'res': [0.3,0.6,0.7],
+    'Seurat-clustering': {'neighbors': Seurat_neighbors,
+                        'res': Seurat_resolution,
                         'set': ['NA']},
-    'random': {'pca': ['NA'],
+    'random': {'neighbors': ['NA'],
                'res': ['NA'],
                'set': ['set1', 'set2', 'set3']},
-    'Active-Learning': {'pca': ['NA'],
+    'Active-Learning': {'neighbors': ['NA'],
                'res': ['NA'],
                'set': list(range(15))}
 }
@@ -14,9 +14,9 @@ selection_expansion_dict = {
 scRNASeq_methods = ['scmap-cluster', 'scmap-sc', 'singleR']
 
 scRNA_predictions = []
-scRNA = [expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-max_dim-{pca}-resolution-{res}-iterations_set-{set}-{method}-predictions.tsv',
+scRNA = [expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-{method}-predictions.tsv',
                         selection_procedure = [select], annotator = ['GroundTruth'], 
-                        pca = selection_expansion_dict[select]['pca'], 
+                        neighbors = selection_expansion_dict[select]['neighbors'], 
                         res = selection_expansion_dict[select]['res'], 
                         set = selection_expansion_dict[select]['set'],
                         method = scRNASeq_methods) 
@@ -51,22 +51,22 @@ cell_type_predictions = {
 
 rule train_and_predict_scmap:
     input:
-        annotation = 'data/scRNASeq/{selection_procedure}/{selection_procedure}-scRNASeq-annotator-{annotator}-max_dim-{pca}-resolution-{res}-iterations_set-{set}.tsv',
+        annotation = 'data/scRNASeq/{selection_procedure}/{selection_procedure}-scRNASeq-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}.tsv',
         train_data = 'data/scRNASeq/scRNASeq-train.rds',
         test_data = 'data/scRNASeq/scRNASeq-test.rds'
     output:
-        cluster_predictions = output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-max_dim-{pca}-resolution-{res}-iterations_set-{set}-scmap-cluster-predictions.tsv',
-        sc_predictions = output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-max_dim-{pca}-resolution-{res}-iterations_set-{set}-scmap-sc-predictions.tsv'
+        cluster_predictions = output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-scmap-cluster-predictions.tsv',
+        sc_predictions = output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-scmap-sc-predictions.tsv'
     script:
         'cell-type-assignment/scmap.R'
 
 rule train_and_predict_singleR:
     input:
-        annotation = 'data/scRNASeq/{selection_procedure}/{selection_procedure}-scRNASeq-annotator-{annotator}-max_dim-{pca}-resolution-{res}-iterations_set-{set}.tsv',
+        annotation = 'data/scRNASeq/{selection_procedure}/{selection_procedure}-scRNASeq-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}.tsv',
         train_data = 'data/scRNASeq/scRNASeq-train.rds',
         test_data = 'data/scRNASeq/scRNASeq-test.rds'
     output:
-        predictions = output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-max_dim-{pca}-resolution-{res}-iterations_set-{set}-singleR-predictions.tsv'
+        predictions = output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotator-{annotator}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-singleR-predictions.tsv'
     script:
         'cell-type-assignment/singleR.R'
 
@@ -99,17 +99,15 @@ rule Seurat_clustering:
         training_rds = 'data/{modality}/{modality}-train.rds',
         markers = 'markers/{modality}.yml'
     params:
-        max_dim = 15,
-        resolution = 0.5,
-        positive_markers_diagnostic = output + 'figures/diagnostics/{modality}-Seurat-[cell_types]-positive-max_dim-{max_pca_dim}-resolution-{res}.pdf',
-        negative_markers_diagnostic = output + 'figures/diagnostics/{modality}-Seurat-[cell_types]-negative-max_dim-{max_pca_dim}-resolution-{res}.pdf',
+        positive_markers_diagnostic = output + 'figures/diagnostics/{modality}-Seurat-[cell_types]-positive-knn_neighbors-{neighbors}-resolution-{res}.pdf',
+        negative_markers_diagnostic = output + 'figures/diagnostics/{modality}-Seurat-[cell_types]-negative-knn_neighbors-{neighbors}-resolution-{res}.pdf',
     output:
-        cluster_umap_pdf = output + 'figures/{modality}-Seurat-cluster-assignment-umap-max_dim-{max_pca_dim}-resolution-{res}.pdf',
-        cell_type_umap_pdf = output + 'figures/{modality}-Seurat-cell-assignment-umap-max_dim-{max_pca_dim}-resolution-{res}.pdf',
-        assignments = output + 'cluster-and-interpret/{modality}/{modality}-Seurat-assignments-max_dim-{max_pca_dim}-resolution-{res}.tsv',
-        diagnostics = expand(output + 'figures/diagnostics/{{modality}}-Seurat-{cell_types}-{pn}-max_dim-{{max_pca_dim}}-resolution-{{res}}.pdf', 
+        cluster_umap_pdf = output + 'figures/{modality}-Seurat-cluster-assignment-umap-knn_neighbors-{neighbors}-resolution-{res}.pdf',
+        cell_type_umap_pdf = output + 'figures/{modality}-Seurat-cell-assignment-umap-knn_neighbors-{neighbors}-resolution-{res}.pdf',
+        assignments = output + 'cluster-and-interpret/{modality}/{modality}-Seurat-assignments-knn_neighbors-{neighbors}-resolution-{res}.tsv',
+        diagnostics = expand(output + 'figures/diagnostics/{{modality}}-Seurat-{cell_types}-{pn}-knn_neighbors-{{neighbors}}-resolution-{{res}}.pdf', 
             cell_types = scRNA_cell_types_clean, pn = ['positive']),
-        ground_truth_umap_pdf = output + 'figures/{modality}-Seurat-ground-truth-umap-max_dim-{max_pca_dim}-resolution-{res}.pdf'
+        ground_truth_umap_pdf = output + 'figures/{modality}-Seurat-ground-truth-umap-knn_neighbors-{neighbors}-resolution-{res}.pdf'
     script:
         'cell-type-assignment/Seurat.R'
 
