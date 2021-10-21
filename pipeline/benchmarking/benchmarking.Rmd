@@ -1,0 +1,58 @@
+---
+title: "Benchmarking"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(yardstick)
+source("pipeline/whatsthatcell-helpers.R")
+```
+
+
+```{r}
+### [ LOAD GROUND TRUTH ] #####
+scRNAseq <- readRDS("data/scRNASeq/scRNASeq-test.rds")#snakemake@input[['sce']])
+scRNAseq_gt <- tibble(cell_id = colnames(scRNAseq),
+                      annotated_cell_type = scRNAseq$CellType)
+
+AL_files <- list.files("output/v1/rare-subtype-benchmarking/", 
+                       pattern = "scRNASeq-Active-Learning-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-14",
+                       full.names = TRUE)
+
+Seurat_files <- list.files("output/v1/rare-subtype-benchmarking/",
+                           pattern = "scRNASeq-Seurat",
+                           full.names = TRUE)
+random_files <- list.files("output/v1/rare-subtype-benchmarking/",
+                           pattern = "scRNASeq-random",
+                           full.names = TRUE)
+
+AL <- lapply(AL_files, read_tsv) %>% 
+  bind_rows()
+Seurat <- lapply(Seurat_files, read_tsv) %>% 
+  bind_rows()
+random <- lapply(random_files, read_tsv) %>% 
+  bind_rows()
+```
+
+
+```{r}
+predictions <- bind_rows(AL, Seurat, random) %>% 
+  left_join(scRNAseq_gt)
+split_params <- str_split_fixed(predictions$prediction_params, "-", 4)
+predictions$method <- paste0(split_params[,1], "-", split_params[,2])
+
+acc <- predictions %>% 
+  filter(predicted_cell_type != "unassigned") %>% 
+  group_by(method, selection_procedure, prediction_params) %>% 
+  acc_wrap()
+
+acc %>% 
+  ggplot(aes(x = selection_procedure, y = .estimate)) +
+  geom_point() +
+  facet_grid(method~.metric) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
