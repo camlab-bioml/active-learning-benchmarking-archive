@@ -1,0 +1,78 @@
+Hematopoetic stem cell marker:
+    - CD117
+B cell:
+    - CD19
+
+
+cell_types:
+    Basophils:
+        positive:
+            - CD11b
+    
+    CD16-_NK_cells:
+        positive:
+            -
+        negative:
+            - CD16
+    
+    CD16+_NK_cells:
+        positive:
+            - CD16
+        
+    CD34+CD38+CD123-_HSPCs:
+        positive:
+            - CD34
+            - CD38
+        negative:
+            - CD123
+            - CD45
+
+    CD34+CD38+CD123+_HSPCs:
+        positive:
+            - CD34
+            - CD38
+            - CD123
+        negative:
+            - CD45
+
+    CD34+CD38lo_HSCs:
+        positive:
+            - CD34
+        negative:
+            - CD38
+            - CD45
+
+    CD4_T_cells:
+        positive:
+            - CD4
+    
+    CD8_T_cells:
+        positive:
+            - CD8
+            - CD45RA
+    
+    Mature_B_cells:
+        positive:
+            - 
+
+    Monocytes:
+        positive:
+            - CD11b
+    
+    pDCs:
+        positive:
+            -
+    
+    Plasma_B_cells:
+        positive:
+            -
+
+    Pre_B_cells:
+        positive:
+            -
+
+    Pro_B_cells:
+        positive:
+            -
+
+    
