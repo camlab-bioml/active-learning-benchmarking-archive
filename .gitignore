@@ -1,6 +1,5 @@
 output/*
 *.Rproj
-data/*
 .Rproj.user
 .snakemake/*
 slurm*
