@@ -181,17 +181,24 @@ createHeatmap <- function(sce,
 
 cell_type_colours <- function() {
   pal <- c("#8B5B42", "#AF4EA9", "#FFB60A", "#0AC694", "#0024DD", "#6CC1FF",
-           "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d")
+           "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d", '#FD4FBD')
   
   celltype_colours <- c(
     "B cell" = pal[2],
+    "B-cell Frac A-C (pro-B cells)" = pal[2],
+    "IgD- IgMpos B cells" = pal[11],
+    "IgM- IgD- B-cells" = pal[13],
     "Cytotoxic T cell" = pal[3],
+    "CMP" = pal[3],
     "CD4+ T cell" = pal[12],
     "CD16+ monocyte" = pal[4],
+    'GMP' = pal[4],
     "Dendritic cell" = pal[5],
     "Plasmacytoid dendritic cell" = pal[6],
     "CD14+ monocyte" = pal[8], 
+    "CLP" = pal[8],
     "Megakaryocyte" = pal[9],
+    "MPP" = pal[9],
     "Natural killer cell" = pal[10],
     'unassigned' = "grey60"
   )
