@@ -59,6 +59,28 @@ calculate_entropy <- function(predictions) {
   return(entropy)
 }
 
+# entropy based selection of cells
+select_entropy <- function(entropy_df, method, amount){
+  if(method == "lowest_entropy"){
+    cells <- c(entropy_df[order(entropy_df$entropy, 
+                                decreasing = T),][1:amount, ]$X1)
+  }else if(method == "first_quartile"){
+    first_quartile <- quantile(entropy_df$entropy, 0.25)
+    
+    ordered_cells <- select(entropy_df, X1, entropy) %>% 
+      arrange(-entropy) %>% 
+      filter(entropy > first_quartile)
+    
+    if(nrow(ordered_cells) > amount){
+      cells <- ordered_cells$X1[1:amount]
+    }else{
+      cells <- ordered_cells$X1
+    }
+  }
+  
+  cells
+}
+
 select_cells_classifier <- function(df_expression, markers, amount = 10) {
   annotated_cells <- df_expression %>% 
     filter(!is.na(cell_type)) %>% 
@@ -82,8 +104,7 @@ select_cells_classifier <- function(df_expression, markers, amount = 10) {
                                     entropy = left_cells$entropy, 
                                     no_cells_annotated = nrow(annotated_cells)))
   
-  selected_cells <- c(left_cells[order(left_cells$entropy, 
-                                       decreasing = T),][1:amount, ]$X1)
+  selected_cells <- select_entropy(left_cells, "first_quartile", amount)
   
   return_list <- list(selected_cells = selected_cells, 
                       entropy_table = entropy_table)

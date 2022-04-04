@@ -2,7 +2,6 @@ library(tidyverse)
 library(SingleCellExperiment)
 
 sce <- readRDS(snakemake@input[['sce']])
-sce <- readRDS("data/scRNASeq/scRNASeq-train.rds")
 
 set.seed(42)
 subset1 <- sce[, sample(1:ncol(sce), 500)]
