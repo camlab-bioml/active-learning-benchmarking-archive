@@ -1,4 +1,6 @@
 
+print(expand('data/{modality}/{modality}-{split}.rds', modality = modalities, split = data_splits))
+
 process_data_output = {
     'train_test_split': expand('data/{modality}/{modality}-{split}.rds', modality = modalities, split = data_splits),
     'scRNA_expression_df': expand('data/{modality}/{modality}-expression-df-{split}.tsv', modality = modalities, split = data_splits),
@@ -9,15 +11,15 @@ process_data_output = {
     'sce_subset1': expand('data/{modality}/random/random-{modality}-set1.rds', modality = modalities),
     'sce_subset2': expand('data/{modality}/random/random-{modality}-set2.rds', modality = modalities),
     'sce_subset3': expand('data/{modality}/random/random-{modality}-set3.rds', modality = modalities),
-    'gt_subset1': expand('data/scRNASeq/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set1.tsv', modality = modalities),
-    'gt_subset2': expand('data/scRNASeq/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set2.tsv', modality = modalities),
-    'gt_subset3': expand('data/scRNASeq/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set3.tsv', modality = modalities),
+    'gt_subset1': expand('data/{modality}/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set1.tsv', modality = modalities),
+    'gt_subset2': expand('data/{modality}/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set2.tsv', modality = modalities),
+    'gt_subset3': expand('data/{modality}/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set3.tsv', modality = modalities),
 
     # Seurat clustering subsets
     'seu_sce': expand('data/{modality}/Seurat-clustering/Seurat-clustering-{modality}-knn_neighbors-{neighbors}-resolution-{res}.rds', 
-        modality = ['scRNASeq'], neighbors = Seurat_neighbors, res = Seurat_resolution),
+        modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution),
     'gt_seu': expand('data/{modality}/Seurat-clustering/Seurat-clustering-{modality}-annotator-GroundTruth-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-NA.tsv', 
-        modality = ['scRNASeq'], neighbors = Seurat_neighbors, res = Seurat_resolution),
+        modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution),
 }
 
 rule split_datasets:
@@ -64,9 +66,9 @@ rule create_random_subsets:
         sce_subset1 = 'data/{modality}/random/random-{modality}-set1.rds',
         sce_subset2 = 'data/{modality}/random/random-{modality}-set2.rds',
         sce_subset3 = 'data/{modality}/random/random-{modality}-set3.rds',
-        gt_subset1 = 'data/scRNASeq/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set1.tsv',
-        gt_subset2 = 'data/scRNASeq/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set2.tsv',
-        gt_subset3 = 'data/scRNASeq/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set3.tsv'
+        gt_subset1 = 'data/{modality}/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set1.tsv',
+        gt_subset2 = 'data/{modality}/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set2.tsv',
+        gt_subset3 = 'data/{modality}/random/random-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-set3.tsv'
     script:
         'process-data/select-random-subset.R'
 
