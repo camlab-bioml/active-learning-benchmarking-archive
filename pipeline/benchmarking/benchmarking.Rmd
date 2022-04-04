@@ -2,11 +2,11 @@
 title: "Benchmarking"
 output: html_document
 params:
-  sce: "data/scRNASeq/scRNASeq-test.rds"
-  input_dir: "output/v1/rare-subtype-benchmarking/"
-  AL_pattern: "scRNASeq-Active-Learning-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-14"
-  seurat_pattern: "scRNASeq-Seurat"
-  random_pattern: "scRNASeq-random"
+  sce: "../../data/scRNASeq/scRNASeq-test.rds"
+  input_dir: "../../output/v1/rare-subtype-benchmarking/"
+  AL_pattern: "scRNASeq-Active-Learning-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-full*100-cells*"
+  seurat_pattern: "scRNASeq-Seurat*100-cells*"
+  random_pattern: "scRNASeq-random*100-cells*"
 ---
 
 ```{r setup, include=FALSE}
@@ -60,7 +60,7 @@ acc <- predictions %>%
 acc %>% 
   ggplot(aes(x = selection_procedure, y = .estimate)) +
   geom_point() +
-  facet_grid(method~.metric) +
+  facet_grid(method ~ .metric) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
 ```
