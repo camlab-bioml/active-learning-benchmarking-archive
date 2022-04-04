@@ -25,16 +25,16 @@ source("../../pipeline/whatsthatcell-helpers.R")
 scRNAseq <- readRDS(params$sce)
 scRNAseq_gt <- tibble(cell_id = colnames(scRNAseq),
                       annotated_cell_type = scRNAseq$CellType)
-#save.image('debug')
+
 AL_files <- list.files(params$input_dir, 
-                       pattern = params$AL_pattern,
+                       pattern = glob2rx(params$AL_pattern),
                        full.names = TRUE)
 
 Seurat_files <- list.files(params$input_dir,
-                           pattern = params$seurat_pattern,
+                           pattern = glob2rx(params$seurat_pattern),
                            full.names = TRUE)
 random_files <- list.files(params$input_dir,
-                           pattern = params$random_pattern,
+                           pattern = glob2rx(params$random_pattern),
                            full.names = TRUE)
 
 AL <- lapply(AL_files, read_tsv) %>% 
@@ -63,5 +63,37 @@ acc %>%
   facet_grid(method~.metric) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
+```
+
+
+```{r}
+cell_type_accuracies <- function(predictions, cell_type){
+  res <- predictions %>% 
+    filter(annotated_cell_type == cell_type | predicted_cell_type == cell_type) %>% 
+    filter(predicted_cell_type != "unassigned") %>% 
+    group_by(method, selection_procedure, prediction_params) %>% 
+    acc_wrap()
+  
+  res %>% 
+    ggplot(aes(x = selection_procedure, y = .estimate)) +
+    geom_point() +
+    labs(title = cell_type) +
+    facet_grid(method ~ .metric) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90))
+}
+
+
+lapply(unique(predictions$annotated_cell_type), function(x){
+  cell_type_accuracies(predictions, x)
+})
+
+
+lapply(unique(predictions$method), function(x){
+  a <- predictions %>% 
+    filter(selection_procedure == "Active-Learning" & method == x)
+  
+  table(a$predicted_cell_type, a$annotated_cell_type)
+})
 ```
 
