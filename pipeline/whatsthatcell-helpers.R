@@ -60,28 +60,55 @@ calculate_entropy <- function(predictions) {
 }
 
 # entropy based selection of cells
-select_entropy <- function(entropy_df, method, amount){
+select_entropy <- function(entropy_df, method, amount, random_selection){
+  # Determine how many cells should be selected non-randomly
+  select_amount <- round(amount * (1-random_selection), 0)
+
+  # Determine how many cells should be selected randomly
+  random_amount <- amount - select_amount
+
+  # Select the cells with the lowest entropy
   if(method == "lowest_entropy"){
     cells <- c(entropy_df[order(entropy_df$entropy, 
-                                decreasing = T),][1:amount, ]$X1)
-  }else if(method == "first_quartile"){
-    first_quartile <- quantile(entropy_df$entropy, 0.25)
-    
+                                decreasing = T),][1:select_amount, ]$X1)
+  }
+  
+  # Find appropriate quantile threshold
+  else if(method == "0.25_quant_entropy"){
+    quantile <- quantile(entropy_df$entropy, 0.25)
+  }else if(method == "0.5_quant_entropy"){
+    quantile <- quantile(entropy_df$entropy, 0.5)
+  }else if(method == "0.75_quant_entropy"){
+    quantile <- quantile(entropy_df$entropy, 0.75)
+  }
+  
+  # Filter cells based on quantiles
+  if(grepl("_quant_entropy", method)){
     ordered_cells <- select(entropy_df, X1, entropy) %>% 
-      arrange(-entropy) %>% 
-      filter(entropy > first_quartile)
+      arrange(entropy) %>% 
+      filter(entropy > quantile)
     
     if(nrow(ordered_cells) > amount){
-      cells <- ordered_cells$X1[1:amount]
+      cells <- ordered_cells$X1[1:select_amount]
     }else{
       cells <- ordered_cells$X1
     }
+  }
+
+  # Randomly select additional cells
+  if(random_selection != 0){
+    if(nrow(entropy_df) > random_amount){
+      random_cells <- sample(entropy_df$X1, random_amount)
+    }else{
+      random_cells <- entropy_df$X1
+    }
+    cells <- c(cells, random_cells)
   }
   
   cells
 }
 
-select_cells_classifier <- function(df_expression, markers, amount = 10) {
+select_cells_classifier <- function(df_expression, markers, selection_method, amount = 10, random_selection) {
   annotated_cells <- df_expression %>% 
     filter(!is.na(cell_type)) %>% 
     filter(cell_type != "Skipped", cell_type != "Unclear")
@@ -104,7 +131,10 @@ select_cells_classifier <- function(df_expression, markers, amount = 10) {
                                     entropy = left_cells$entropy, 
                                     no_cells_annotated = nrow(annotated_cells)))
   
-  selected_cells <- select_entropy(left_cells, "first_quartile", amount)
+  selected_cells <- select_entropy(entropy_df = left_cells, 
+                                   method = selection_method, 
+                                   amount = amount, 
+                                   random_selection = random_selection)
   
   return_list <- list(selected_cells = selected_cells, 
                       entropy_table = entropy_table)
@@ -125,9 +155,13 @@ cell_ranking_wrapper <- function(df, markers){
 }
 
 
-active_learning_wrapper <- function(df, unique_markers, iteration, entropies = NULL){
+active_learning_wrapper <- function(df, unique_markers, selection_method, iteration, entropies = NULL, random_selection){
   # AL selected cells
-  AL <- select_cells_classifier(df, unique_markers)
+  AL <- select_cells_classifier(df_expression = df, 
+                                markers = unique_markers, 
+                                selection_method = selection_method,
+                                amount = 10, 
+                                random_selection = random_selection)
   new_cells <- AL$selected_cells
   
   if(!is.null(entropies)){
