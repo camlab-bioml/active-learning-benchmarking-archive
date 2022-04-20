@@ -4,21 +4,29 @@ library(yaml)
 library(SingleCellExperiment)
 library(tidyverse)
 source("pipeline/whatsthatcell-helpers.R")
-
+#save.image('debug-AL')
 
 ### [ LOAD & PROCESS DATA ] #####
-markers <- read_yaml('markers/scRNASeq.yml')#snakemake@input[['markers']])
+markers <- read_yaml(snakemake@input[['markers']])
 unique_markers <- unique(unlist(markers$cell_types))
 
-sce <- readRDS("data/scRNASeq/scRNASeq-train.rds")#snakemake@input[['expression']])
+sce <- readRDS(snakemake@input[['expression']])
+if(TRUE %in% grepl("CD16_32", rownames(sce))){
+  rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
+}
+
 df_expression <- load_scs(sce)
 df_expression$cell_type <- NA
 df_expression$iteration <- NA
 df_expression$gt_cell_type <- sce$CellType
 
-### Create ground truth tibble
-#ground_truth <- tibble(cell_id = rownames(colData(sce)),
-#                       cell_type = sce$CellType)
+## Corrupt a fraction of labels
+if(as.numeric(snakemake@wildcards[['corrupt']]) != 0){
+  num_corrupt <- round((nrow(df_expression) * as.numeric(snakemake@wildcards[['corrupt']])), 0)
+  corrupt_idx <- sample(1:nrow(df_expression), num_corrupt)
+
+  df_expression$gt_cell_type[corrupt_idx] <- sample(df_expression$gt_cell_type[corrupt_idx])
+}
 
 # Get list of cell types
 all_cell_types <- df_expression$gt_cell_type %>% unique()
@@ -43,7 +51,7 @@ for(i in 1:iterations){
 # create a list to save all entropies into
 entropies <- list()
 for(i in 1:nrow(df_expression)){
-  AL <- active_learning_wrapper(df_expression, unique_markers, i, entropies)
+  AL <- active_learning_wrapper(df_expression, unique_markers, snakemake@wildcards[['strat']], i, entropies, as.numeric(snakemake@wildcards[['rand']]))
 
   df_expression <- AL$expression
   entropies <- AL$entropies
@@ -65,7 +73,7 @@ entropies %>%
 df_expression %>% 
   filter(!is.na(cell_type)) %>% 
   dplyr::rename("cell_id" = "X1") %>% 
-  mutate(method = "Active-Learning - ground truth") %>% 
+  mutate(method = paste0("Active-Learning - ground truth - strategy:", snakemake@wildcards[['strat']]) %>% 
   select(cell_id, cell_type, method, iteration) %>% 
   write_tsv(snakemake@output[['assignments']])
 
