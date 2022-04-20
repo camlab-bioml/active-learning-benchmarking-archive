@@ -79,7 +79,7 @@ cell_types:
   #   positive:
   #     - cKit
   #   negative:
-  #     - CD16_32
+  #     - CD16-32
   #     - CD34
   #     - Sca1
   #     - CD115
@@ -94,7 +94,7 @@ cell_types:
       - cKit
       - CD34
     negative:
-      - CD16_32
+      - CD16-32
       - Sca1
       - CD115
       - CD11b
@@ -106,7 +106,7 @@ cell_types:
   GMP:
     positive:
       - CD34
-      - CD16_32
+      - CD16-32
       - cKit
     negative:
       - Sca1
