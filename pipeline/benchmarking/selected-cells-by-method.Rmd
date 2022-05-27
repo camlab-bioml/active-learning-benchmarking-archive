@@ -104,6 +104,10 @@ if(any(grepl("CellType", colnames(colData(sce))))){
   cell_type_column <- "cell_type"
 }
 
+if(TRUE %in% grepl("CD16_32", rownames(sce))){
+  rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
+}
+
 sub_sce <- sce[markers, colnames(sce) %in% AL$cell_id]
 createHeatmap(sub_sce, 
               cell_type_column = cell_type_column, 
