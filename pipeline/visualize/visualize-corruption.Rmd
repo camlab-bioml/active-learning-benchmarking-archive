@@ -1,0 +1,106 @@
+---
+title: "Visualize corruption"
+output: html_document
+params:
+  random_files_path: "../../data/CyTOF/random/"
+  seurat_files_path: "../../data/CyTOF/Seurat-clustering/"
+  AL_files_path: "../../data/CyTOF/Active-Learning/AL-batches-subset"
+  sce: "../../data/CyTOF/CyTOF-train.rds"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
+suppressPackageStartupMessages({
+  library(readr)
+  library(magrittr)
+  library(ggalluvial)
+  library(tidyr)
+  library(dplyr)
+})
+source("../../pipeline/whatsthatcell-helpers.R")
+```
+
+
+
+```{r message = FALSE}
+sce <- readRDS(params$sce)
+gt <- tibble(cell_id = colnames(sce),
+             ground_truth = sce$CellType)
+
+random_files <- list.files(params$random_files_path, full.names = TRUE)
+random <- lapply(random_files, read_tsv) %>%  
+  bind_rows() %>% 
+  mutate(set = as.character(set)) %>% 
+  separate(params, into = c("num", "cell_num", 'cor', 'corruption'), sep = '-') %>% 
+  select(-c(num, cor)) %>% 
+  left_join(gt)
+head(random)
+
+seurat_files <- list.files(params$seurat_files_path, full.names = TRUE)
+Seurat <- lapply(seurat_files, read_tsv) %>%  
+  bind_rows() %>% 
+  dplyr::rename("set" = "params") %>% 
+  mutate(set = as.character(set)) %>% 
+  separate(set, into = c("knn", 'knn_val', 'res', 'res_val', 'num', 'num_val', 'cor', 'corruption'), sep = '-') %>% 
+  select(-c(knn, res, num, cor)) %>% 
+  left_join(gt)
+head(Seurat)
+
+AL_files <- list.files(params$AL_files_path, full.names = TRUE)
+AL <- lapply(AL_files, read_tsv) %>% 
+  bind_rows() %>% 
+  mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 
+  separate(method, into = c('strategy', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
+  select(-c(r, c)) %>% 
+  left_join(gt)
+head(AL)
+```
+
+
+```{r fig.width=15, fig.height=8}
+random %>% 
+  pivot_longer(c(cell_type, ground_truth), names_to = "gt_or_mutated", values_to = "cell_type") %>% 
+  ggplot(aes(x = gt_or_mutated, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+  geom_stratum() +
+  geom_flow() +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() +
+  facet_grid(cell_num ~ set + corruption, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r fig.width=20, fig.height=20}
+Seurat %>% 
+  mutate(res_val = gsub("cell", "", res_val)) %>% 
+  pivot_longer(c(cell_type, ground_truth), names_to = "gt_or_mutated", values_to = "cell_type") %>% 
+  ggplot(aes(x = gt_or_mutated, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+  geom_stratum() +
+  geom_flow() +
+  scale_fill_manual(values = cell_type_colours()) +
+  whatsthatcell_theme() +
+  facet_grid(num_val + res_val ~ knn_val + corruption, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+
+```{r fig.width=13, fig.height=20}
+AL_alluvial <- function(AL, cells){
+  AL %>% 
+    pivot_longer(c(cell_type, ground_truth), names_to = "gt_or_mutated", values_to = "cell_type") %>% 
+    filter(cell_num == cells) %>% 
+    ggplot(aes(x = gt_or_mutated, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+    geom_stratum() +
+    geom_flow() +
+    scale_fill_manual(values = cell_type_colours()) +
+    whatsthatcell_theme() +
+    facet_grid(random + strategy ~ corrupted, scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+}
+
+lapply(unique(AL$cell_num), function(x){
+  AL_alluvial(AL, x)
+})
+
+```
+
