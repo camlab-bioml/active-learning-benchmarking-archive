@@ -2,11 +2,11 @@
 title: "Compare ground truth to predicted"
 output: html_document
 params:
-  sce: "data/scRNASeq/scRNASeq-test.rds"
-  input_dir: ""
-  AL_pattern: ""
-  seurat_pattern: ""
-  random_pattern: ""
+  sce: "../../data/CyTOF/CyTOF-test.rds"
+  input_dir: "../../output/v3/rare-subtype-benchmarking/"
+  AL_pattern: "CyTOF-Active-Learning"
+  seurat_pattern: "CyTOF-Seurat"
+  random_pattern: "CyTOF-random"
 ---
 
 ```{r setup, include=FALSE}
@@ -20,17 +20,16 @@ source("../../pipeline/whatsthatcell-helpers.R")
 ```
 
 
-```{r}
+```{r message=F}
 ### [ LOAD GROUND TRUTH ] #####
-scRNAseq <- readRDS(params$sce)
-scRNAseq_gt <- tibble(cell_id = colnames(scRNAseq),
-                      ground_truth = scRNAseq$CellType)
+sce <- readRDS(params$sce)
+gt <- tibble(cell_id = colnames(sce),
+             ground_truth = sce$CellType)
 
 ###  [ LOAD PREDICTIONS ] #####
 AL_files <- list.files(params$input_dir, 
                        pattern = params$AL_pattern,
                        full.names = TRUE)
-
 Seurat_files <- list.files(params$input_dir,
                            pattern = params$seurat_pattern,
                            full.names = TRUE)
@@ -38,36 +37,78 @@ random_files <- list.files(params$input_dir,
                            pattern = params$random_pattern,
                            full.names = TRUE)
 
-AL <- lapply(AL_files, read_tsv) %>% 
-  bind_rows()
-Seurat <- lapply(Seurat_files, read_tsv) %>% 
-  bind_rows()
-random <- lapply(random_files, read_tsv) %>% 
-  bind_rows()
+AL <- lapply(AL_files, function(x){
+  df <- read_tsv(x) %>% 
+    separate(prediction_params, c('m1', 'm2', 'rm_it', 'rm_na', 'rm_knn', 'rm_na2',
+                                'rm_res', 'rm_na3', 'rm_cell', 'cell_num', 'rm_sel',
+                                'random', 'rm_cor', 'corrupted'), sep = '-') %>% 
+    mutate(selection_procedure = gsub('Active-Learning-strategy-', '', selection_procedure)) %>% 
+    select(-starts_with('rm')) %>% 
+    unite('method', c(m1, m2), sep = '-')
+  }) %>% bind_rows()
+
+Seurat <- lapply(Seurat_files, function(x){
+  df <- read_tsv(x) %>% 
+  separate(prediction_params, c('m1', 'm2', 'rm_it', 'rm_na', 'rm_knn', 'knn',
+                                'rm_res', 'res', 'rm_cell', 'cell_num', 'rm_sel',
+                                'rm_na2', 'rm_cor', 'corrupted'), sep = '-') %>% 
+  select(-starts_with('rm')) %>% 
+  mutate(selection_procedure = gsub("-strategy-NA", "", selection_procedure)) %>% 
+  unite('method', c(m1, m2), sep = '-')
+  }) %>% bind_rows()
+
+random <- lapply(random_files, function(x){
+  df <- read_tsv(x) %>% 
+  separate(prediction_params, c('m1', 'm2', 'rm_it', 'set', 'rm_knn', 'rm_na2',
+                                'rm_res', 'rm_na3', 'rm_cell', 'cell_num', 'rm_sel',
+                                'rm_na', 'rm_cor', 'corrupted'), sep = '-') %>% 
+  select(-starts_with('rm')) %>% 
+  mutate(selection_procedure = gsub("-strategy-NA", "", selection_procedure)) %>% 
+  unite('method', c(m1, m2), sep = '-')
+  }) %>% bind_rows()
+
 
 predictions <- bind_rows(AL, Seurat, random) %>% 
-  left_join(scRNAseq_gt)
+  left_join(gt)
 split_params <- str_split_fixed(predictions$prediction_params, "-", 3)
 predictions$method <- paste0(split_params[,1], "-", split_params[,2])
 predictions$simple_params <- split_params[,3]
 ```
 
 
-```{r}
+```{r fig.height = 20, fig.width=15}
+plot_prediction_alluvial <- function(df, title){
+  df %>% 
+    pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+    ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+    geom_stratum() +
+    geom_flow() +
+    scale_fill_manual(values = cell_type_colours()) +
+    whatsthatcell_theme() +
+    facet_grid(random + corrupted ~ method + cell_num) +
+    labs(x = "", y = "cell", title = title) +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+}
+
 predictions %>% 
-  filter(selection_procedure == 'Active-Learning') %>% 
-  pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
-  ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
-  geom_stratum() +
-  geom_flow() +
-  scale_fill_manual(values = cell_type_colours()) +
-  whatsthatcell_theme() +
-  facet_wrap(~ method) + 
-  labs(x = "", y = "cell", title = "Active Learning") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+  filter(selection_procedure == '0.25_quant_entropy') %>%
+  plot_prediction_alluvial(., '0.25_quant_entropy')
+
+predictions %>% 
+  filter(selection_procedure == '0.5_quant_entropy') %>%
+  plot_prediction_alluvial(., '0.5_quant_entropy')
+
+predictions %>% 
+  filter(selection_procedure == '0.75_quant_entropy') %>%
+  plot_prediction_alluvial(., '0.75_quant_entropy')
+
+predictions %>% 
+  filter(selection_procedure == 'lowest_entropy') %>%
+  plot_prediction_alluvial(., 'lowest_entropy')
 ```
 
-```{r fig.width=8, fig.height=9}
+
+```{r fig.width=14, fig.height=16}
 predictions %>% 
   filter(selection_procedure == 'random') %>% 
   pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
@@ -75,13 +116,14 @@ predictions %>%
   geom_stratum() +
   geom_flow() +
   scale_fill_manual(values = cell_type_colours()) +
-  whatsthatcell_theme() + 
-  facet_grid(simple_params ~ method) +
-  labs(x = "", y = "cell", title = "Random selection") +
+  whatsthatcell_theme() +
+  facet_grid(set + corrupted ~ method + cell_num) +
+  labs(x = "", y = "cell", title = "Random") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
 
-```{r fig.height=20, fig.width=9}
+
+```{r fig.height=25, fig.width=16}
 predictions %>% 
   filter(selection_procedure == 'Seurat-clustering') %>% 
   pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
@@ -90,7 +132,7 @@ predictions %>%
   geom_flow() +
   scale_fill_manual(values = cell_type_colours()) +
   whatsthatcell_theme() + 
-  facet_grid(simple_params ~ method) +
+  facet_grid(corrupted + knn + res ~ method + cell_num) +
   labs(x = "", y = "cell", title = "Seurat-clustering") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 ```
