@@ -6,6 +6,7 @@ params:
   seurat_files_path: "../../data/CyTOF/Seurat-clustering/"
   AL_files_path: "../../data/CyTOF/Active-Learning/AL-batches-subset"
   sce: "../../data/CyTOF/CyTOF-train.rds"
+  modality: ""
 ---
 
 ```{r setup, include=FALSE}
@@ -28,7 +29,7 @@ sce <- readRDS(params$sce)
 gt <- tibble(cell_id = colnames(sce),
              ground_truth = sce$CellType)
 
-random_files <- list.files(params$random_files_path, full.names = TRUE)
+random_files <- list.files(params$random_files_path, full.names = TRUE, pattern = "tsv")
 random <- lapply(random_files, read_tsv) %>%  
   bind_rows() %>% 
   mutate(set = as.character(set)) %>% 
@@ -37,7 +38,7 @@ random <- lapply(random_files, read_tsv) %>%
   left_join(gt)
 head(random)
 
-seurat_files <- list.files(params$seurat_files_path, full.names = TRUE)
+seurat_files <- list.files(params$seurat_files_path, full.names = TRUE, pattern = "tsv")
 Seurat <- lapply(seurat_files, read_tsv) %>%  
   bind_rows() %>% 
   dplyr::rename("set" = "params") %>% 
@@ -47,7 +48,7 @@ Seurat <- lapply(seurat_files, read_tsv) %>%
   left_join(gt)
 head(Seurat)
 
-AL_files <- list.files(params$AL_files_path, full.names = TRUE)
+AL_files <- list.files(params$AL_files_path, full.names = TRUE, pattern = "tsv")
 AL <- lapply(AL_files, read_tsv) %>% 
   bind_rows() %>% 
   mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 

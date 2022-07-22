@@ -7,7 +7,6 @@ training <- read_tsv(snakemake@input[['assignment']]) %>%
 ranked <- filter(training, iteration == 0)
 
 subset <- as.integer(snakemake@wildcards[['subset_val']])
-#save.image('debug')
 if(subset != 0){
   AL <- filter(training, iteration != 0) %>% 
     filter(iteration <= subset)

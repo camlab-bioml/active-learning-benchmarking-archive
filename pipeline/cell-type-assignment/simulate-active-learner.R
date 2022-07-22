@@ -5,6 +5,7 @@ library(SingleCellExperiment)
 library(tidyverse)
 source("pipeline/whatsthatcell-helpers.R")
 #save.image('debug-AL')
+set.seed(42)
 
 ### [ LOAD & PROCESS DATA ] #####
 markers <- read_yaml(snakemake@input[['markers']])
@@ -22,10 +23,24 @@ df_expression$gt_cell_type <- sce$CellType
 
 ## Corrupt a fraction of labels
 if(as.numeric(snakemake@wildcards[['corrupt']]) != 0){
+  all_cell_types <- unique(sce$CellType)
   num_corrupt <- round((nrow(df_expression) * as.numeric(snakemake@wildcards[['corrupt']])), 0)
   corrupt_idx <- sample(1:nrow(df_expression), num_corrupt)
 
-  df_expression$gt_cell_type[corrupt_idx] <- sample(df_expression$gt_cell_type[corrupt_idx])
+  for(i in 1:length(all_cell_types)){
+    tc <- all_cell_types[i]
+
+    to_corrupt <- which(df_expression$gt_cell_type == tc)
+    to_corrupt <- intersect(to_corrupt, corrupt_idx)
+    if(length(to_corrupt) > 0){
+      subset_cell_types <- all_cell_types[!grepl(tc, all_cell_types)]
+      df_expression$gt_cell_type[to_corrupt] <- sample(subset_cell_types, 
+                                                       length(to_corrupt), 
+                                                       replace = TRUE)
+    }
+  }
+
+  # df_expression$gt_cell_type[corrupt_idx] <- sample(df_expression$gt_cell_type[corrupt_idx])
 }
 
 # Get list of cell types
@@ -72,8 +87,11 @@ entropies %>%
 
 df_expression %>% 
   filter(!is.na(cell_type)) %>% 
-  dplyr::rename("cell_id" = "X1") %>% 
-  mutate(method = paste0("Active-Learning - ground truth - strategy:", snakemake@wildcards[['strat']]) %>% 
+  dplyr::rename("cell_id" = "X1",
+                "corrupted_AL_cell_type" = "cell_type",
+                "cell_type" = "gt_cell_type") %>% 
+  mutate(method = paste0("Active-Learning-groundTruth-strategy-", snakemake@wildcards[['strat']], 
+                         '-randomCells-', snakemake@wildcards[['rand']], '-corrupted-', snakemake@wildcards[['corrupt']])) %>% 
   select(cell_id, cell_type, method, iteration) %>% 
   write_tsv(snakemake@output[['assignments']])
 
