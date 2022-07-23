@@ -162,21 +162,10 @@ active_learning_wrapper <- function(df, unique_markers, selection_method, iterat
                                 selection_method = selection_method,
                                 amount = 10, 
                                 random_selection = random_selection)
-  new_cells <- AL$selected_cells
   
-  if(!is.null(entropies)){
-    entropies[[length(entropies) + 1]] <- AL$entropy_table
-  }
-  
-  # What index do the selected cells correspond to?
-  to_assign_index <- match(new_cells, df$X1)
-  
-  # Get ground truth labels based on the index
-  df$cell_type[to_assign_index] <- df$gt_cell_type[to_assign_index]
-  df$iteration[to_assign_index] <- iteration
-
-  list(expression = df, entropies = entropies)
+  list(new_cells = AL$selected_cells, entropies = AL$entropy_table)
 }
+
 
 ### [ ACCURACIES ] #####
 acc_wrap <- function(tt) {
