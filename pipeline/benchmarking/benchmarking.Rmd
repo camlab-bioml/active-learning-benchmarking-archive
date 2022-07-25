@@ -2,11 +2,11 @@
 title: "Benchmarking"
 output: html_document
 params:
-  sce: "../../data/scRNASeq/scRNASeq-test.rds"
-  input_dir: "../../output/v1/rare-subtype-benchmarking/"
-  AL_pattern: "scRNASeq-Active-Learning-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-full*100-cells*"
-  seurat_pattern: "scRNASeq-Seurat*100-cells*"
-  random_pattern: "scRNASeq-random*100-cells*"
+  sce: "data/CyTOF/CyTOF-test.rds"
+  input_dir: "output/v4/rare-subtype-benchmarking/"
+  AL_pattern: "CyTOF-Active-Learning*-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-*-cells*"
+  seurat_pattern: "CyTOF-Seurat*-cells*"
+  random_pattern: "CyTOF-random*-cells*"
 ---
 
 ```{r setup, include=FALSE}
@@ -22,9 +22,10 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 ```{r message=F}
 ### [ LOAD GROUND TRUTH ] #####
-scRNAseq <- readRDS(params$sce)
-scRNAseq_gt <- tibble(cell_id = colnames(scRNAseq),
-                      annotated_cell_type = scRNAseq$CellType)
+setwd("../../")
+sce <- readRDS(params$sce)
+sce_gt <- tibble(cell_id = colnames(sce),
+                 annotated_cell_type = sce$CellType)
 
 AL_files <- list.files(params$input_dir, 
                        pattern = glob2rx(params$AL_pattern),
@@ -48,30 +49,96 @@ random <- lapply(random_files, read_tsv) %>%
 
 ```{r}
 predictions <- bind_rows(AL, Seurat, random) %>% 
-  left_join(scRNAseq_gt)
-split_params <- str_split_fixed(predictions$prediction_params, "-", 4)
-predictions$method <- paste0(split_params[,1], "-", split_params[,2])
+  left_join(sce_gt) %>% 
+  separate(prediction_params, c('m1', 'm2', 'rm_it', 'set', 'rm_knn', 'knn', 
+                     'rm_res', 'res', 'rm_cell_num', 'cell_num', 'rm_rand', 'rand', 
+                     'rm_corr', 'corrupted'), sep = '-') %>% 
+  select(-starts_with('rm')) %>% 
+  unite(method, c(m1, m2), sep = '-') %>% 
+  mutate(selection_procedure = gsub("Active-Learning-strategy-", "", selection_procedure))
 
 acc <- predictions %>% 
-  filter(predicted_cell_type != "unassigned") %>% 
-  group_by(method, selection_procedure, prediction_params) %>% 
-  acc_wrap()
+  filter(predicted_cell_type != "unassigned") %>%
+  group_by(method, set, knn, res, cell_num, rand, corrupted, selection_procedure) %>% 
+  acc_wrap() %>% 
+  mutate(selection_procedure = gsub("_quant_entropy", "-AL", selection_procedure),
+         selection_procedure = gsub("_entropy", "-AL", selection_procedure),
+         selection_procedure = gsub("-strategy-NA", "", selection_procedure),
+         cell_num = factor(cell_num, levels = c("50", "100", "250", "500")))
+
+
+selection_order <- acc %>% 
+  filter(rand == "0" | rand == "NA") %>% 
+  filter(corrupted == "0") %>% 
+  group_by(selection_procedure) %>% 
+  summarise(mean_accuracy = mean(.estimate)) %>% 
+  arrange(mean_accuracy) %>% 
+  pull(selection_procedure)
 
 acc %>% 
-  ggplot(aes(x = selection_procedure, y = .estimate)) +
+  filter(rand == "0" | rand == "NA") %>% 
+  filter(corrupted == "0") %>% 
+  mutate(selection_procedure = factor(selection_procedure, levels = selection_order)) %>% 
+  ggplot(aes(x = selection_procedure, y = .estimate, color = method)) +
   geom_point() +
+  ylim(0, 1) +
+  labs(x = "Selection proceduce") +
+  facet_grid(cell_num ~ .metric) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+acc %>% 
+  filter(rand == "0" | rand == "NA") %>% 
+  filter(corrupted == "0") %>% 
+  mutate(selection_procedure = factor(selection_procedure, levels = selection_order),
+         plotting_group = paste0(set, "-", knn, "-", res, "-", selection_procedure)) %>% 
+  ggplot(aes(x = cell_num, y = .estimate, color = selection_procedure, group = plotting_group)) +
+  geom_point() +
+  ylim(0, 1) +
+  geom_line() +
   facet_grid(method ~ .metric) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+
+lapply(unique(acc$method), function(x){
+  acc %>% 
+    filter(rand == "0") %>% 
+    filter(method == x) %>% 
+    ggplot(aes(x = corrupted, y = .estimate, color = selection_procedure, group = selection_procedure)) + 
+    geom_point() +
+    geom_line() +
+    ylim(0, 1) +
+    facet_grid(cell_num ~ .metric) + 
+    theme_bw() + 
+    labs(title = x, color = "Selection procedure", x = "Corrupted") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+})
+
+
+lapply(unique(acc$method), function(x){
+  acc %>% 
+    filter(corrupted == "0" & selection_procedure != "random" & selection_procedure != "Seurat-clustering") %>% 
+    filter(method == x) %>% 
+    ggplot(aes(x = rand, y = .estimate, color = selection_procedure, group = selection_procedure)) +
+    geom_point() + 
+    geom_line() +
+    ylim(0, 1) +
+    facet_grid(cell_num ~ .metric) + 
+    theme_bw() + 
+    labs(title = x, color = "Selection procedure", x = "Corrupted") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+})
 ```
 
 
-```{r}
+```{r eval = F}
 cell_type_accuracies <- function(predictions, cell_type){
   res <- predictions %>% 
-    filter(annotated_cell_type == cell_type | predicted_cell_type == cell_type) %>% 
+    filter(annotated_cell_type == cell_type) %>% 
     filter(predicted_cell_type != "unassigned") %>% 
-    group_by(method, selection_procedure, prediction_params) %>% 
+    #group_by(method, selection_procedure, prediction_params) %>% 
+    group_by(method, set, knn, res, cell_num, rand, corrupted, selection_procedure) %>% 
     acc_wrap()
   
   res %>% 
