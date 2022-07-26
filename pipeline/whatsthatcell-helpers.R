@@ -67,8 +67,8 @@ select_entropy <- function(entropy_df, method, amount, random_selection){
   # Determine how many cells should be selected randomly
   random_amount <- amount - select_amount
 
-  # Select the cells with the lowest entropy
-  if(method == "lowest_entropy"){
+  # Select the cells with the highest entropy
+  if(method == "highest_entropy"){
     cells <- c(entropy_df[order(entropy_df$entropy, 
                                 decreasing = T),][1:select_amount, ]$X1)
   }
@@ -108,7 +108,57 @@ select_entropy <- function(entropy_df, method, amount, random_selection){
   cells
 }
 
-select_cells_classifier <- function(df_expression, markers, selection_method, amount = 10, random_selection) {
+# maximum probability based selection of cells
+select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selection){
+  # Determine how many cells should be selected non-randomly
+  select_amount <- round(amount * (1-random_selection), 0)
+  
+  # Determine how many cells should be selected randomly
+  random_amount <- amount - select_amount
+  
+  # Select the cells with the highest maxp
+  if(method == "lowest_maxp"){
+    cells <- maxp_df[order(maxp_df$maxp, decreasing = F),][1:select_amount, ]$X1
+  }
+  
+
+  # Find appropriate quantile threshold
+  else if(method == "0.25_quant_maxp"){
+    quantile <- quantile(entropy_df$entropy, 0.25)
+  }else if(method == "0.5_quant_maxp"){
+    quantile <- quantile(entropy_df$entropy, 0.5)
+  }else if(method == "0.75_quant_maxp"){
+    quantile <- quantile(entropy_df$entropy, 0.75)
+  }
+
+  # Filter cells based on quantiles
+  if(grepl("_quant_maxp", method)){
+    ordered_cells <- select(entropy_df, X1, entropy) %>%
+      arrange(entropy) %>%
+      filter(entropy > quantile)
+
+    if(nrow(ordered_cells) > amount){
+      cells <- ordered_cells$X1[1:select_amount]
+    }else{
+      cells <- ordered_cells$X1
+    }
+  }
+  
+  # Randomly select additional cells
+  if(random_selection != 0){
+    if(nrow(maxp_df) > random_amount){
+      random_cells <- sample(maxp_df$X1, random_amount)
+    }else{
+      random_cells <- maxp_df$X1
+    }
+    cells <- c(cells, random_cells)
+  }
+  
+  cells
+}
+
+select_cells_classifier <- function(df_expression, markers, selection_method, amount = 10, 
+                                    random_selection, selection_criterion = "entropy") {
   annotated_cells <- df_expression %>% 
     filter(!is.na(cell_type)) %>% 
     filter(cell_type != "Skipped", cell_type != "Unclear")
@@ -118,26 +168,49 @@ select_cells_classifier <- function(df_expression, markers, selection_method, am
   
   multiNomModelFit <- train(cell_type ~ ., 
                             data = annotated_cells[, c(markers, "cell_type")], 
-                            method = "multinom")
+                            method = "multinom",
+                            trace = FALSE)
   
   predicted_scores <- predict(multiNomModelFit, 
                               left_cells[, markers], type = "prob")
   
-  entropies <- apply(predicted_scores, 1, calculate_entropy)
-  
-  left_cells$entropy <- entropies
-  
-  entropy_table <- data.frame(cbind(cell_id = left_cells$X1, 
-                                    entropy = left_cells$entropy, 
-                                    no_cells_annotated = nrow(annotated_cells)))
-  
-  selected_cells <- select_entropy(entropy_df = left_cells, 
-                                   method = selection_method, 
-                                   amount = amount, 
-                                   random_selection = random_selection)
+  if(selection_criterion == "entropy"){
+    entropies <- apply(predicted_scores, 1, calculate_entropy)
+    
+    left_cells$entropy <- entropies
+    
+    selected_cells <- select_entropy(entropy_df = left_cells, 
+                                     method = selection_method, 
+                                     amount = amount, 
+                                     random_selection = random_selection)
+    
+    criterion_table <- data.frame(cell_id = left_cells$X1, 
+                                  criterion_val = left_cells$entropy, 
+                                  no_cells_annotated = nrow(annotated_cells),
+                                  criterion = selection_criterion)
+    
+  }else if(selection_criterion == "maxp"){
+    max_p_idx <- apply(predicted_scores, 1, which.max)
+    max_p <- lapply(seq_len(nrow(predicted_scores)), function(x){
+      predicted_scores[x, max_p_idx[x]]
+    }) %>% unlist()
+    
+    left_cells$maxp <- max_p
+    
+    selected_cells <- select_maxp(maxp_df = left_cells, 
+                                  method = selection_method, 
+                                  amount = amount, 
+                                  random_selection = random_selection)
+    
+    criterion_table <- data.frame(cell_id = left_cells$X1, 
+                                  criterion_val = left_cells$maxp, 
+                                  no_cells_annotated = nrow(annotated_cells),
+                                  criterion = selection_criterion)
+  }
+
   
   return_list <- list(selected_cells = selected_cells, 
-                      entropy_table = entropy_table)
+                      criterion_table = criterion_table)
   return(return_list)
 }
 
@@ -155,13 +228,15 @@ cell_ranking_wrapper <- function(df, markers){
 }
 
 
-active_learning_wrapper <- function(df, unique_markers, selection_method, iteration, entropies = NULL, random_selection){
+active_learning_wrapper <- function(df, unique_markers, selection_method, iteration, 
+                                    entropies = NULL, random_selection, selection_criterion = "entropy"){
   # AL selected cells
   AL <- select_cells_classifier(df_expression = df, 
                                 markers = unique_markers, 
                                 selection_method = selection_method,
                                 amount = 10, 
-                                random_selection = random_selection)
+                                random_selection = random_selection,
+                                selection_criterion = selection_criterion)
   
   list(new_cells = AL$selected_cells, entropies = AL$entropy_table)
 }
