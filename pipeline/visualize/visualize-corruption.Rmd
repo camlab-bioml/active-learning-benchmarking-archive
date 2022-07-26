@@ -24,7 +24,6 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 ```{r message = FALSE}
 AL_files <- list.files(params$AL_files_path, full.names = TRUE, pattern = "tsv")
-setwd('../../')
 AL <- lapply(AL_files, read_tsv) %>% 
   bind_rows() %>% 
   mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 

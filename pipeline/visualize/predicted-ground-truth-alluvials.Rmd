@@ -76,7 +76,7 @@ predictions$cell_num <- factor(predictions$cell_num, levels = c("50", "100", "25
 
 
 ```{r fig.height = 25, fig.width=18}
-plot_prediction_alluvial <- function(df, sel, method, title){
+plot_prediction_alluvial <- function(df, sel, method){
   df %>% 
     filter(selection_procedure == sel & method == method) %>% 
     pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
@@ -86,33 +86,47 @@ plot_prediction_alluvial <- function(df, sel, method, title){
     scale_fill_manual(values = cell_type_colours()) +
     whatsthatcell_theme() +
     facet_grid(random + corrupted ~ cell_num) +
-    labs(x = "", y = "cell", title = title) +
+    labs(x = "", y = "cell") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 }
 
 selections <- c("0.25_quant_entropy", "0.5_quant_entropy", "0.75_quant_entropy", "lowest_entropy")
 
-lapply(selections, function(x){
-  lapply(unique(predictions$method), function(y){
-    plot_prediction_alluvial(predictions, x, y, paste0(x, " - ", y))
-  })
-})
+# lapply(selections, function(x){
+#   lapply(unique(predictions$method), function(y){
+#     # this_plot_title <- x #paste0(x)# , " - ", y)
+#     plot_prediction_alluvial(predictions, x, y)
+#   })
+# })
 
-# predictions %>% 
-#   filter(selection_procedure == '0.25_quant_entropy') %>%
-#   plot_prediction_alluvial(., '0.25_quant_entropy')
-
-# predictions %>% 
-#   filter(selection_procedure == '0.5_quant_entropy') %>%
-#   plot_prediction_alluvial(., '0.5_quant_entropy')
-
-# predictions %>% 
-#   filter(selection_procedure == '0.75_quant_entropy') %>%
-#   plot_prediction_alluvial(., '0.75_quant_entropy')
-
-# predictions %>% 
-#   filter(selection_procedure == 'lowest_entropy') %>%
-#   plot_prediction_alluvial(., 'lowest_entropy')
+for(i in selections){
+  for(j in unique(predictions$method)){
+    df <- predictions %>% 
+      filter(selection_procedure == i & method == j)
+    print(dim(df))
+    print(i)
+    print(j)
+    
+    # df2 <- df %>%
+    #   group_by(random, corrupted, cell_num) %>%
+    #   tally() %>%
+    #   as.data.frame()
+    # print(df2)
+    
+    gg <- df %>%
+      pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+      ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+      geom_stratum() +
+      geom_flow() +
+      scale_fill_manual(values = cell_type_colours()) +
+      whatsthatcell_theme() +
+      facet_grid(random + corrupted ~ cell_num) +
+      labs(x = "", y = "cell", title = paste0(i, " - ", j)) +
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+    
+   print(gg)
+  }
+}
 ```
 
 
@@ -126,14 +140,30 @@ plot_prediction_alluvial_random <- function(pred, method){
     geom_flow() +
     scale_fill_manual(values = cell_type_colours()) +
     whatsthatcell_theme() +
-    facet_grid(set + corrupted ~ cell_num) +
+    facet_grid(set ~ cell_num) +
     labs(x = "", y = "cell", title = paste0("Random - ", method)) +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 }
 
-lapply(unique(predictions$method), function(x){
-  plot_prediction_alluvial_random(predictions, x)
-})
+# lapply(unique(predictions$method), function(x){
+#   plot_prediction_alluvial_random(predictions, x)
+# })
+
+for(i in unique(predictions$method)){
+  gg <- predictions %>% 
+    filter(selection_procedure == 'random' & method == i) %>% 
+    pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+    ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+    geom_stratum() +
+    geom_flow() +
+    scale_fill_manual(values = cell_type_colours()) +
+    whatsthatcell_theme() +
+    facet_grid(set ~ cell_num) +
+    labs(x = "", y = "cell", title = paste0("Random - ", i)) +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+  print(gg)
+}
 ```
 
 
@@ -147,14 +177,30 @@ plot_prediction_alluvial_seurat <- function(df, method_sel){
     geom_flow() +
     scale_fill_manual(values = cell_type_colours()) +
     whatsthatcell_theme() + 
-    facet_grid(corrupted + knn + res ~ cell_num) +
+    facet_grid(knn + res ~ cell_num) +
     labs(x = "", y = "cell", title = paste0("Seurat-clustering ", method_sel)) +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 }
 
-lapply(unique(predictions$method), function(x){
-  plot_prediction_alluvial_seurat(predictions, method_sel = x)
-})
+# lapply(unique(predictions$method), function(x){
+#   plot_prediction_alluvial_seurat(predictions, method_sel = x)
+# })
+
+for(i in unique(predictions$method)){
+  gg <- predictions %>% 
+    filter(selection_procedure == 'Seurat-clustering' & method == i) %>% 
+    pivot_longer(c(predicted_cell_type, ground_truth), names_to = 'predicted_or_gt', values_to = 'cell_type') %>% 
+    ggplot(aes(x = predicted_or_gt, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
+    geom_stratum() +
+    geom_flow() +
+    scale_fill_manual(values = cell_type_colours()) +
+    whatsthatcell_theme() + 
+    facet_grid(knn + res ~ cell_num) +
+    labs(x = "", y = "cell", title = paste0("Seurat-clustering ", i)) +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+  print(gg)
+}
 ```
 
 
