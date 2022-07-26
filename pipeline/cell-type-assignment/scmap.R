@@ -2,6 +2,7 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
   library(scmap)
   library(tidyverse)
+  library(caret)
 })
 
 # Read in training data expression
@@ -9,8 +10,30 @@ train_sce <- readRDS(snakemake@input[['train_data']])
 
 # Read in annotated labels
 annotations <- read_tsv(snakemake@input[['annotation']]) %>% 
-  as.data.frame() %>% 
+  as.data.frame() %>%
   column_to_rownames('cell_id')
+
+# # For active learning, make sure the cells are in the order they were selected in
+# if(snakemake@wildcards[['selection_procedure']] == "Active-Learning"){
+#   annotations <- annotations %>% arrange(iteration)
+# }
+
+# if(snakemake@wildcards[['selection_procedure']] == "Seurat-clustering"){
+#   # For seurat clustering - make sure I still have an even number of cell types
+#   if(snakemake@wildcards[['cell_num']] == 500){
+#     prop <- 1
+#   }else{
+#     prop <- as.integer(snakemake@wildcards[['cell_num']]) / nrow(annotations)
+#   }
+#   trainIndex <- createDataPartition(annotations$cell_type, p = prop, 
+#                                   list = FALSE, 
+#                                   times = 1)
+#   annotations <- annotations[trainIndex, ]
+# }else{
+#   annotations <- annotations[1:as.integer(snakemake@wildcards[['cell_num']]),]
+# }
+
+train_sce <- train_sce[,colnames(train_sce) %in% rownames(annotations)]
 
 # Add labels to expression
 train_sce$cell_type1 <- annotations[colnames(train_sce), 'cell_type']
@@ -42,8 +65,12 @@ clustering_prediction <- tibble(cell_id = colnames(annotate_sce),
                                 prediction_params = paste0('scmap-clusters-iterations_set-', 
                                                            snakemake@wildcards[['set']],
                                                            "-knn-", snakemake@wildcards[['neighbors']],
-                                                           "-res-", snakemake@wildcards[['res']]),
-                                selection_procedure = snakemake@wildcards[['selection_procedure']],
+                                                           "-res-", snakemake@wildcards[['res']], 
+                                                           "-cell_numbers-", snakemake@wildcards[['cell_num']],
+                                                           '-randomSelection-', snakemake@wildcards[['rand']], 
+                                                           '-corrupted-', snakemake@wildcards[['corrupt']]),
+                                selection_procedure = paste0(snakemake@wildcards[['selection_procedure']],
+                                                             '-strategy-', snakemake@wildcards[['strat']]),
                                 training_annotator = snakemake@wildcards[['annotator']],
                                 modality = 'scRNASeq')
 
@@ -74,8 +101,12 @@ sc_prediction <- tibble(cell_id = colnames(annotate_sce),
                         prediction_params = paste0('scmap-sc-iterations_set-',
                                                    snakemake@wildcards[['set']],
                                                    "-knn-", snakemake@wildcards[['neighbors']],
-                                                   "-res-", snakemake@wildcards[['res']]),
-                        selection_procedure = snakemake@wildcards[['selection_procedure']],
+                                                   "-res-", snakemake@wildcards[['res']],
+                                                   "-cell_numbers-", snakemake@wildcards[['cell_num']],
+                                                   '-randomSelection-', snakemake@wildcards[['rand']], 
+                                                   '-corrupted-', snakemake@wildcards[['corrupt']]),
+                        selection_procedure = paste0(snakemake@wildcards[['selection_procedure']],
+                                                     '-strategy-', snakemake@wildcards[['strat']]),
                         training_annotator = snakemake@wildcards[['annotator']],
                         modality = 'scRNASeq')
 

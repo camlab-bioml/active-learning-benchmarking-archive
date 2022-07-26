@@ -1,6 +1,7 @@
 suppressPackageStartupMessages({
   library(SingleR)
   library(tidyverse)
+  library(caret)
 })
 
 train_sce <- readRDS(snakemake@input[['train_data']])
@@ -14,6 +15,8 @@ train_sce$cell_type <- train_labels[colnames(train_sce), 'cell_type']
 
 train_sce <- train_sce[,!is.na(train_sce$cell_type)]
 
+train_sce <- train_sce[,colnames(train_sce) %in% rownames(train_labels)]
+
 annotate_sce <- readRDS(snakemake@input[['test_data']])
 assays(annotate_sce)$counts <- NULL
 
@@ -24,8 +27,12 @@ result <- tibble(cell_id = rownames(pred),
                  prediction_params = paste0('singleR-labels-iterations_set-', 
                                             snakemake@wildcards[['set']],
                                             "-knn-", snakemake@wildcards[['neighbors']],
-                                            "-res-", snakemake@wildcards[['res']]),
-                 selection_procedure = snakemake@wildcards[['selection_procedure']],
+                                            "-res-", snakemake@wildcards[['res']], 
+                                            "-cell_numbers-", snakemake@wildcards[['cell_num']],
+                                            '-randomSelection-', snakemake@wildcards[['rand']], 
+                                            '-corrupted-', snakemake@wildcards[['corrupt']]),
+                 selection_procedure = paste0(snakemake@wildcards[['selection_procedure']],
+                                              '-strategy-', snakemake@wildcards[['strat']]),
                  training_annotator = snakemake@wildcards[['annotator']],
                  modality = 'scRNASeq')
 

@@ -8,10 +8,10 @@ source("pipeline/whatsthatcell-helpers.R")
 set.seed(42)
 
 ### [ LOAD & PROCESS DATA ] #####
-markers <- read_yaml("markers/CyTOF.yml") #snakemake@input[['markers']])
+markers <- read_yaml(snakemake@input[['markers']])
 unique_markers <- unique(unlist(markers$cell_types))
 
-sce <- readRDS("data/CyTOF/CyTOF-train.rds") #snakemake@input[['expression']])
+sce <- readRDS(snakemake@input[['expression']])
 if(TRUE %in% grepl("CD16_32", rownames(sce))){
   rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
 }
@@ -25,7 +25,7 @@ df_expression$corrupted <- NA
 ## Corrupt a fraction of labels
 if(as.numeric(snakemake@wildcards[['corrupt']]) != 0){
   all_cell_types <- unique(sce$CellType)
-  num_corrupt <- round((nrow(df_expression) * 0.3))#as.numeric(snakemake@wildcards[['corrupt']])), 0)
+  num_corrupt <- round((nrow(df_expression) * as.numeric(snakemake@wildcards[['corrupt']])), 0)
   corrupt_idx <- sample(1:nrow(df_expression), num_corrupt)
 
   for(i in 1:length(all_cell_types)){
@@ -71,12 +71,10 @@ entropies <- list()
 for(i in 1:nrow(df_expression)){
   AL <- active_learning_wrapper(df_expression, 
                                 unique_markers, 
-                                #snakemake@wildcards[['strat']], 
-                                'lowest_entropy',
+                                snakemake@wildcards[['strat']], 
                                 i, 
                                 entropies, 
-                                #as.numeric(snakemake@wildcards[['rand']])
-                                0)
+                                as.numeric(snakemake@wildcards[['rand']]))
 
   entropies[[length(entropies) + 1]] <- AL$entropies
   
@@ -112,25 +110,7 @@ df_expression %>%
   select(cell_id, cell_type, corrupted_cell_type, iteration) %>% 
   filter(!is.na(corrupted_cell_type)) %>% 
   mutate(method = paste0("Active-Learning-groundTruth-strategy-", 
-                         #snakemake@wildcards[['strat']], 
-                         'lowest_entropy',
-                         '-randomCells-', 
-                         0, #snakemake@wildcards[['rand']], 
-                         '-corrupted-', 
-                         #snakemake@wildcards[['corrupt']],
-                         0.3)) %>% 
-  write_tsv("data/CyTOF/Active-Learning/Active-Learning-lowest_entropy-rand_sel-0-corr-0.3-CyTOF-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-full.tsv")
-  
-
-  
-df_expression %>% 
-  select(X1, cell_type, iteration, gt_cell_type) %>% 
-  filter(!is.na(cell_type)) %>% 
-  left_join(gt_cell_type, by = c("X1" = "cell_id"))
-  dplyr::rename("cell_id" = "X1",
-                "corrupted_AL_cell_type" = "cell_type",
-                "cell_type" = "gt_cell_type") %>% 
-  mutate(method = paste0("Active-Learning-groundTruth-strategy-", snakemake@wildcards[['strat']], 
-                         '-randomCells-', snakemake@wildcards[['rand']], '-corrupted-', snakemake@wildcards[['corrupt']])) %>% 
+                         snakemake@wildcards[['strat']], '-randomCells-', 
+                         snakemake@wildcards[['rand']], '-corrupted-', 
+                         snakemake@wildcards[['corrupt']])) %>% 
   write_tsv(snakemake@output[['assignments']])
-

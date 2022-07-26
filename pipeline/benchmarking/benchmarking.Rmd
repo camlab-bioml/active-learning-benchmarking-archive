@@ -22,7 +22,6 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 ```{r message=F}
 ### [ LOAD GROUND TRUTH ] #####
-setwd("../../")
 sce <- readRDS(params$sce)
 sce_gt <- tibble(cell_id = colnames(sce),
                  annotated_cell_type = sce$CellType)
@@ -44,6 +43,7 @@ Seurat <- lapply(Seurat_files, read_tsv) %>%
   bind_rows()
 random <- lapply(random_files, read_tsv) %>% 
   bind_rows()
+save.image('debug-benchmark.Rdata')
 ```
 
 
@@ -86,7 +86,9 @@ acc %>%
   facet_grid(cell_num ~ .metric) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
 
+```{r}
 acc %>% 
   filter(rand == "0" | rand == "NA") %>% 
   filter(corrupted == "0") %>% 
@@ -99,8 +101,9 @@ acc %>%
   facet_grid(method ~ .metric) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
 
-
+```{r}
 lapply(unique(acc$method), function(x){
   acc %>% 
     filter(rand == "0") %>% 
@@ -114,8 +117,9 @@ lapply(unique(acc$method), function(x){
     labs(title = x, color = "Selection procedure", x = "Corrupted") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 })
+```
 
-
+```{r}
 lapply(unique(acc$method), function(x){
   acc %>% 
     filter(corrupted == "0" & selection_procedure != "random" & selection_procedure != "Seurat-clustering") %>% 

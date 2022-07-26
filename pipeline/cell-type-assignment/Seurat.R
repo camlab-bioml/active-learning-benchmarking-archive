@@ -11,7 +11,7 @@ unique_markers <- unlist(markers) %>% unique()
 
 
 ### [PROCESS DATA] ###
-if(snakemake@wildcards[['modality']] == 'scRNASeq'){
+if(snakemake@params[['mod']] == 'scRNASeq'){
   # Normalize scRNASeq data
   seu <- CreateSeuratObject(counts = assays(sce)$counts)
   seu <- NormalizeData(seu)
@@ -29,7 +29,7 @@ seu <- RunPCA(seu, features = VariableFeatures(object = seu))
 
 ### [CLUSTERING] ###
 n_of_pcs <- 30
-seu <- FindNeighbors(seu, dims = 1:n_of_pcs, k.param = as.integer(snakemake@wildcards[['neighbors']]))#snakemake@wildcards[['max_pca_dim']])
+seu <- FindNeighbors(seu, dims = 1:n_of_pcs, k.param = as.integer(snakemake@wildcards[['neighbors']]))
 seu <- FindClusters(seu, resolution = as.numeric(snakemake@wildcards[['res']]))
 
 # First UMAP viz
@@ -95,7 +95,7 @@ assignments <- left_join(clusters, cluster_assignments) %>%
                                     "pca ", n_of_pcs,
                                     " neighbors ", snakemake@wildcards[['neighbors']],
                                     " - resolution ", snakemake@wildcards[['res']]),
-         modality = snakemake@wildcards[['modality']])
+         modality = snakemake@params[['mod']])
 
 assignments %>% 
   select(cell_id, predicted_cell_type, prediction_params, cluster, modality) %>% 
