@@ -12,10 +12,16 @@ selection_expansion_dict = {
                'strategy': 'NA',
                'random_selection': 'NA',
                'corruption': [0]},
-    'Active-Learning': {'neighbors': ['NA'],
+    'Active-Learning_entropy': {'neighbors': ['NA'],
                'res': ['NA'],
                'set': ['NA'],
-               'strategy': ['0.25_quant_entropy', '0.5_quant_entropy', '0.75_quant_entropy', 'lowest_entropy'],
+               'strategy': ['0.25_quant_entropy', '0.5_quant_entropy', '0.75_quant_entropy', 'highest_entropy'],
+               'random_selection': [0, 0.25, 0.5, 0.75],
+               'corruption': corruption_percentages},
+    'Active-Learning_maxp': {'neighbors': ['NA'],
+               'res': ['NA'],
+               'set': ['NA'],
+               'strategy': ['0.25_quant_maxp', '0.5_quant_maxp', '0.75_quant_maxp', 'lowest_maxp'],
                'random_selection': [0, 0.25, 0.5, 0.75],
                'corruption': corruption_percentages}
 }
@@ -55,30 +61,10 @@ for element in CyTOF:
 cell_type_predictions = {
     'scRNASeq': scRNA_predictions,
     'CyTOF': CyTOF_predictions
-    #'random_forest_models': expand(output + 'models/random-forest-{modality}-trained-on-{selection_procedure}-by-{annotator}.pkl', 
-    #    modality = modalities, selection_procedure = selection_procedures, annotator = annotators),
-    #'random_forest_prediction': expand(output + 'rare-subtype-benchmarking/{modality}-{selection_procedure}-annotation-{annotator}-randomForest-predictions.tsv',
-    #    modality = modalities, selection_procedure = selection_procedures, annotator = annotators),
-    # 'scmap_cluster': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-scmap-cluster-predictions.tsv',
-    #     selection_procedure = selection_procedures, annotator = annotators),
-    # 'scmap_cluster_AL': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-scmap-cluster-predictions.tsv',
-    #     selection_procedure = ['Active-Learning'], annotator = AL_annotator),
-    # 'scmap_sc': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-scmap-sc-predictions.tsv',
-    #     selection_procedure = selection_procedures, annotator = annotators),
-    # 'scmap_sc': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-scmap-sc-predictions.tsv',
-    #     selection_procedure = ['Active-Learning'], annotator = AL_annotator),
-    # 'singleR': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-singleR-predictions.tsv',
-    #     selection_procedure = selection_procedures, annotator = annotators),
-    # 'singleR': expand(output + 'rare-subtype-benchmarking/scRNASeq-{selection_procedure}-annotation-{annotator}-singleR-predictions.tsv',
-    #     selection_procedure = ['Active-Learning'], annotator = AL_annotator),
-    # 'Seurat': expand(output + 'cluster-and-interpret/{modality}/{modality}-Seurat-assignments-max_dim-{max_pca_dim}-resolution-{res}.tsv', 
-    #     modality = ['scRNASeq'], max_pca_dim = [10, 12, 15], res = [0.3, 0.5, 0.7]),
-    # 'CyTOF_LDA': expand(output + 'rare-subtype-benchmarking/CyTOF-{selection_procedure}-annotation-{annotator}-CyTOF-LDA-predictions.tsv', 
-    #     selection_procedure = selection_procedures, annotator = annotators)
 }
 
 def get_labels(procedure, mod):
-    if procedure == "Active-Learning":
+    if procedure == "Active-Learning_entropy" or procedure == "Active-Learning_maxp":
         path = 'data/{modality}/{{selection_procedure}}/AL-batches-subset/{{selection_procedure}}-{{strat}}-rand_sel-{{rand}}-corr-{{corrupt}}-{modality}-annotator-{{annotator}}-knn_neighbors-{{neighbors}}-resolution-{{res}}-iterations_set-NA-{{cell_num}}_cells.tsv'
     else:
         path = 'data/{modality}/{{selection_procedure}}/{{selection_procedure}}-{{strat}}-rand_sel-{{rand}}-corr-{{corrupt}}-{modality}-annotator-{{annotator}}-knn_neighbors-{{neighbors}}-resolution-{{res}}-iterations_set-{{set}}-{{cell_num}}_cells.tsv'
@@ -117,8 +103,8 @@ rule train_random_forest_cytof:
         model = output + 'models/random-forest-CyTOF-trained-on-{selection_procedure}-{strat}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-by-{annotator}-{cell_num}-cells.pkl'
     resources:
         mem_mb=20000
-    #log:
-    #    output + 'logs/cell-type-predictions/random-forest-CyTOF-trained-on-{selection_procedure}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-by-{annotator}-{cell_num}-cells.log'
+    log:
+        output + 'logs/cell-type-predictions/random-forest-CyTOF-trained-on-{selection_procedure}-{strat}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-by-{annotator}-{cell_num}-cells.log'
     script:
         'cell-type-assignment/random-forest-train.py'
 
@@ -132,8 +118,8 @@ rule train_random_forest_scRNA:
         model = output + 'models/random-forest-scRNASeq-trained-on-{selection_procedure}-{strat}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-by-{annotator}-{cell_num}-cells.pkl'
     resources:
         mem_mb=20000
-    #log:
-    #    output + 'logs/cell-type-predictions/random-forest-scRNASeq-trained-on-{selection_procedure}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-by-{annotator}-{cell_num}-cells.log'
+    log:
+        output + 'logs/cell-type-predictions/random-forest-scRNASeq-trained-on-{selection_procedure}-{strat}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-{set}-by-{annotator}-{cell_num}-cells.log'
     script:
         'cell-type-assignment/random-forest-train.py'
 

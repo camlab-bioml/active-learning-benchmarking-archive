@@ -36,4 +36,10 @@ result <- tibble(cell_id = rownames(pred),
                  training_annotator = snakemake@wildcards[['annotator']],
                  modality = 'scRNASeq')
 
+if(is.null(snakemake@wildcards[['cell_selection']])){
+  result$cell_selection <- NA
+}else{
+  result$cell_selection <- snakemake@wildcards[['cell_selection']]
+}
+
 write_tsv(result, snakemake@output[['predictions']])

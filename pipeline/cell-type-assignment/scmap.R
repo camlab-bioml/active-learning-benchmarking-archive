@@ -13,26 +13,6 @@ annotations <- read_tsv(snakemake@input[['annotation']]) %>%
   as.data.frame() %>%
   column_to_rownames('cell_id')
 
-# # For active learning, make sure the cells are in the order they were selected in
-# if(snakemake@wildcards[['selection_procedure']] == "Active-Learning"){
-#   annotations <- annotations %>% arrange(iteration)
-# }
-
-# if(snakemake@wildcards[['selection_procedure']] == "Seurat-clustering"){
-#   # For seurat clustering - make sure I still have an even number of cell types
-#   if(snakemake@wildcards[['cell_num']] == 500){
-#     prop <- 1
-#   }else{
-#     prop <- as.integer(snakemake@wildcards[['cell_num']]) / nrow(annotations)
-#   }
-#   trainIndex <- createDataPartition(annotations$cell_type, p = prop, 
-#                                   list = FALSE, 
-#                                   times = 1)
-#   annotations <- annotations[trainIndex, ]
-# }else{
-#   annotations <- annotations[1:as.integer(snakemake@wildcards[['cell_num']]),]
-# }
-
 train_sce <- train_sce[,colnames(train_sce) %in% rownames(annotations)]
 
 # Add labels to expression
@@ -74,6 +54,12 @@ clustering_prediction <- tibble(cell_id = colnames(annotate_sce),
                                 training_annotator = snakemake@wildcards[['annotator']],
                                 modality = 'scRNASeq')
 
+if(is.null(snakemake@wildcards[['cell_selection']])){
+  clustering_prediction$cell_selection <- NA
+}else{
+  clustering_prediction$cell_selection <- snakemake@wildcards[['cell_selection']]
+}
+
 
 write_tsv(clustering_prediction, snakemake@output[['cluster_predictions']])
 
@@ -109,6 +95,12 @@ sc_prediction <- tibble(cell_id = colnames(annotate_sce),
                                                      '-strategy-', snakemake@wildcards[['strat']]),
                         training_annotator = snakemake@wildcards[['annotator']],
                         modality = 'scRNASeq')
+
+if(is.null(snakemake@wildcards[['cell_selection']])){
+  sc_prediction$cell_selection <- NA
+}else{
+  sc_prediction$cell_selection <- snakemake@wildcards[['cell_selection']]
+}
 
 write_tsv(sc_prediction, snakemake@output[['sc_predictions']])
 

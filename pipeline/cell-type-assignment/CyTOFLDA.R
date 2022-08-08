@@ -11,31 +11,6 @@ sce_train <- readRDS(snakemake@input[['training_rds']])
 labs <- read_tsv(snakemake@input[['labels']])
 labs <- labs %>% column_to_rownames("cell_id")
 
-# # For active learning, make sure the cells are in the order they were selected in
-# if(snakemake@wildcards[['selection_procedure']] == "Active-Learning"){
-#   labs <- labs %>% arrange(iteration)
-# }
-# print('this owrks')
-# if(snakemake@wildcards[['selection_procedure']] == "Seurat-clustering"){
-#   # For seurat clustering - make sure I still have an even number of cell types
-#   if(snakemake@wildcards[['cell_num']] == "500"){
-#     prop <- 1
-#     print('mayby')
-#   }else{
-#     print('mabye2')
-#     prop <- as.integer(snakemake@wildcards[['cell_num']]) / nrow(labs)
-#   }
-#   print('maybe 3')
-#   trainIndex <- createDataPartition(labs$cell_type, p = prop, 
-#                                     list = FALSE, 
-#                                     times = 1)
-#   labs <- labs[trainIndex, ]
-# }else{
-#   print('maybe 5')
-#   # Subset to the number of cells that are of interest
-#   labs <- labs[1:as.integer(snakemake@wildcards[['cell_num']]),]
-# }
-
 sce_train <- sce_train[,colnames(sce_train) %in% rownames(labs)]
 sce_train$cell_type <- labs[colnames(sce_train), 'cell_type']
 
@@ -76,5 +51,11 @@ df_output <- tibble(
   training_annotator = snakemake@wildcards[['annotator']],
   modality = 'CyTOF'
 )
+
+if(is.null(snakemake@wildcards[['cell_selection']])){
+  df_output$cell_selection <- NA
+}else{
+  df_output$cell_selection <- snakemake@wildcards[['cell_selection']]
+}
 
 write_tsv(df_output, snakemake@output[['prediction']])

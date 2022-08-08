@@ -124,18 +124,18 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
 
   # Find appropriate quantile threshold
   else if(method == "0.25_quant_maxp"){
-    quantile <- quantile(entropy_df$entropy, 0.25)
+    quantile <- quantile(maxp_df$maxp, 0.25)
   }else if(method == "0.5_quant_maxp"){
-    quantile <- quantile(entropy_df$entropy, 0.5)
+    quantile <- quantile(maxp_df$maxp, 0.5)
   }else if(method == "0.75_quant_maxp"){
-    quantile <- quantile(entropy_df$entropy, 0.75)
+    quantile <- quantile(maxp_df$maxp, 0.75)
   }
 
   # Filter cells based on quantiles
   if(grepl("_quant_maxp", method)){
-    ordered_cells <- select(entropy_df, X1, entropy) %>%
-      arrange(entropy) %>%
-      filter(entropy > quantile)
+    ordered_cells <- select(maxp_df, X1, maxp) %>%
+      arrange(maxp) %>%
+      filter(maxp > quantile)
 
     if(nrow(ordered_cells) > amount){
       cells <- ordered_cells$X1[1:select_amount]
@@ -254,7 +254,6 @@ acc_wrap <- function(tt) {
     tryCatch({bal_accuracy(tt, annotated_cell_type, predicted_cell_type)}, error=function(e) NULL),
     tryCatch({mcc(tt, annotated_cell_type, predicted_cell_type)}, error=function(e) NULL),
     tryCatch({sensitivity(tt, annotated_cell_type, predicted_cell_type)}, error=function(e) NULL),
-    tryCatch({specificity(tt, annotated_cell_type, predicted_cell_type)}, error=function(e) NULL)
   )
 }
 

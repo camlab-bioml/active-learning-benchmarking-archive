@@ -65,7 +65,11 @@ for(i in 1:iterations){
 }
 
 ### [ ACTIVE LEARNING CELL TYPE ASSIGNMENT ] #####
-
+if(snakemake@wildcards[['AL_type']] == 'Active-Learning_maxp'){
+  criterion <- "maxp"
+}else if(snakemake@wildcards[['AL_type']] == 'Active-Learning_entropy'){
+  criterion <- "entropy"
+}
 # create a list to save all entropies into
 entropies <- list()
 for(i in 1:nrow(df_expression)){
@@ -74,7 +78,8 @@ for(i in 1:nrow(df_expression)){
                                 snakemake@wildcards[['strat']], 
                                 i, 
                                 entropies, 
-                                as.numeric(snakemake@wildcards[['rand']]))
+                                as.numeric(snakemake@wildcards[['rand']]),
+                                criterion)
 
   entropies[[length(entropies) + 1]] <- AL$entropies
   
@@ -87,6 +92,10 @@ for(i in 1:nrow(df_expression)){
   
   not_annotated <- filter(df_expression, is.na(cell_type)) %>% 
     nrow()
+  
+  #if(not_annotated %% 10 == 0){
+  print(not_annotated)
+  #}
   if(not_annotated < 10){
     break
   }

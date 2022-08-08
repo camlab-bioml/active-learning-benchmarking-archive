@@ -21,4 +21,9 @@ output = pd.DataFrame({'cell_id': cell_ids,
                        'training_annotator': snakemake.wildcards['annotator'],
                        'modality': snakemake.params['modality']})
 
+if 'cell_selection' in dict(snakemake.wildcards).keys():
+    output['cell_selection'] = snakemake.wildcards['cell_selection']
+else:
+    output['cell_selection'] = 'NA'
+
 output.to_csv(snakemake.output['predictions'], sep = '\t', index = False)

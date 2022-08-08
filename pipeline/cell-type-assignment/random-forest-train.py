@@ -17,7 +17,7 @@ print('worked')
 
 expression = pd.merge(expression, annotation, on = 'cell_id')
 
-if snakemake.wildcards['selection_procedure'] == 'Active-Learning':
+if snakemake.wildcards['selection_procedure'] == 'Active-Learning_entropy' or snakemake.wildcards['selection_procedure'] == 'Active-Learning_maxp':
     expression = expression.sort_values(by = ['iteration'])
     expression = expression.drop(['iteration', 'cell_num', 'corrupted_cell_type'], axis = 1)
 
