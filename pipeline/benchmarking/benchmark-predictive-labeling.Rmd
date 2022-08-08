@@ -3,19 +3,12 @@ title: "Benchmark predictive labeling"
 output: html_document
 date: "2022-07-30"
 params:
-  sce: "data/CyTOF/CyTOF-test.rds"
-  base_dir: "output/v4/rare-subtype-benchmarking"
-  pred_lab_base_dir: "output/v4/predictive-labeling-benchmarking"
-  AL_pattern: "CyTOF-Active-Learning*-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations_set-*-cells*"
-  AL_pattern_pred_lab: "CyTOF-Active-Learning_*cells*"
-  seurat_pattern: "CyTOF-Seurat*-cells*"
-  seurate_pattern_pred_lab: "CyTOF-Seurat-clustering*cells*"
-  random_pattern: "CyTOF-random*cells*"
-  random_pattern_pred_lab: "CyTOF-random-*-cells*"
+  acc: ""
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
 suppressPackageStartupMessages({
   library(readr)
   library(dplyr)
@@ -23,80 +16,12 @@ suppressPackageStartupMessages({
   library(yardstick)
   library(ggplot2)
 })
-source("pipeline/whatsthatcell-helpers.R")
+source("../../pipeline/whatsthatcell-helpers.R")
 ```
-
-```{r message=F}
-sce <- readRDS(params$sce)
-gt <- tibble(cell_id = colnames(sce),
-             annotated_cell_type = sce$CellType)
-
-AL_files <- list.files(params$base_dir,
-                       pattern = glob2rx(params$AL_pattern),
-                       full.names = TRUE)
-AL_pred_lab_files <- list.files(params$pred_lab_base_dir,
-                                pattern = glob2rx(params$AL_pattern_pred_lab),
-                                full.names = TRUE)
-seurat_files <- list.files(params$base_dir, 
-                           pattern = glob2rx(params$seurat_pattern),
-                           full.names = TRUE)
-seurat_pred_lab_files <- list.files(params$pred_lab_base_dir,
-                                    pattern = glob2rx(params$seurate_pattern_pred_lab),
-                                    full.names = TRUE)
-random_files <- list.files(params$base_dir, 
-                           pattern = glob2rx(params$random_pattern),
-                           full.names = TRUE)
-random_pred_lab_files <- list.files(params$pred_lab_base_dir, 
-                                    pattern = glob2rx(params$random_pattern_pred_lab),
-                                    full.names = TRUE)
-
-AL <- lapply(AL_files, read_tsv) |> 
-  bind_rows() |> 
-  mutate(cell_selection = "baseline")
-AL_pred_lab <- lapply(AL_pred_lab_files, read_tsv) |> 
-  bind_rows()
-
-seurat <- lapply(seurat_files, read_tsv) |> 
-  bind_rows() |> 
-  mutate(cell_selection = "baseline")
-seurat_pred_lab <- lapply(seurat_pred_lab_files, read_tsv) |> 
-  bind_rows()
-
-random <- lapply(random_files, read_tsv) |> 
-  bind_rows() |> 
-  mutate(cell_selection = "baseline")
-random_pred_lab <- lapply(random_pred_lab_files, read_tsv) |> 
-  bind_rows()
-```
-
 
 ```{r}
-predictions <- bind_rows(AL, AL_pred_lab, seurat, seurat_pred_lab, random, random_pred_lab) |> 
-  left_join(gt) |> 
-  separate(prediction_params, c('m1', 'm2', 'rm_it', 'set', 'rm_knn', 'knn', 
-                     'rm_res', 'res', 'rm_cell_num', 'cell_num', 'rm_rand', 'rand', 
-                     'rm_corr', 'corrupted'), sep = '-') |> 
-  select(-starts_with('rm')) |> 
-  unite(method, c(m1, m2), sep = '-') |> 
-  mutate(selection_procedure = gsub("Active-Learning_entropy-strategy-", "", selection_procedure),
-         selection_procedure = gsub("Active-Learning-strategy-", "", selection_procedure),
-         selection_procedure = gsub("Active-Learning_maxp-strategy-", "", selection_procedure))
+acc <- read_tsv(params$acc)
 
-acc <- predictions |> 
-  filter(predicted_cell_type != "unassigned") |> 
-  group_by(method, set, knn, res, cell_num, rand, corrupted, selection_procedure, 
-           cell_selection) |> 
-  acc_wrap() |> 
-  mutate(selection_procedure = gsub("_quant_entropy", "-entropy-AL", selection_procedure),
-         selection_procedure = gsub("_entropy", "-entropy-AL", selection_procedure),
-         selection_procedure = gsub("_quant_maxp", "-maxp-AL", selection_procedure),
-         selection_procedure = gsub("_maxp", "-maxp-AL", selection_procedure),
-         selection_procedure = gsub("-strategy-NA", "", selection_procedure),
-         cell_num = factor(cell_num, levels = c("50", "100", "250", "500")))
-```
-
-
-```{r}
 lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
     filter(method == x) |>
@@ -121,6 +46,7 @@ lapply(unique(acc$method), function(x){
 
 
 ```{r}
+save.image('debug-pred-lab-benchmark.Rdata')
 lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
     filter(method == x) |>
@@ -141,10 +67,4 @@ lapply(unique(acc$method), function(x){
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 })
 ```
-
-
-
-
-
-
 
