@@ -3,7 +3,7 @@ title: "Benchmark predictive labeling"
 output: html_document
 date: "2022-07-30"
 params:
-  acc: ""
+  acc: "../../output/v4/results/benchmark-predictive-labeling-CyTOF.tsv"
 ---
 
 ```{r setup, include=FALSE}
@@ -21,6 +21,9 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 ```{r}
 acc <- read_tsv(params$acc)
+
+cell_nums <- as.character(sort(unique(acc$cell_num)))
+acc$cell_num <- factor(acc$cell_num, levels = cell_nums)
 
 lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
@@ -46,7 +49,6 @@ lapply(unique(acc$method), function(x){
 
 
 ```{r}
-save.image('debug-pred-lab-benchmark.Rdata')
 lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
     filter(method == x) |>
@@ -67,4 +69,29 @@ lapply(unique(acc$method), function(x){
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 })
 ```
+
+
+```{r fig.width=7, fig.height=4}
+lapply(unique(acc$method), function(x){
+  sample_order <- acc |> 
+    filter(method == x) |>
+    group_by(selection_procedure) |> 
+    summarize(mean_score = mean(.estimate)) |> 
+    arrange(mean_score) |> 
+    pull(selection_procedure)
+  acc |> 
+    filter(method == x) |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = sample_order)) |> 
+    ggplot(aes(x = selection_procedure, y = .estimate, color = cell_num)) +
+    geom_boxplot() +
+    #geom_jitter(width = 0.05) +
+    ylim(0, 1) +
+    labs(x = "High confidence cell selection", title = x, color = "Cell number") +
+    facet_grid( ~ .metric) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+})
+```
+
+
 
