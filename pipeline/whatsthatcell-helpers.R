@@ -3,7 +3,7 @@
 ### [ ACTIVE LEARNING ] #####
 select_initial_cells <- function(df_expression,
                                  marker_dict,
-                                 number_cells = 2) {
+                                 number_cells = 1) {
   cell_types <- names(marker_dict)
   unannotated_cells <- df_expression %>% filter(is.na(cell_type))
   annotated_cells <- df_expression %>% filter(!is.na(cell_type))
@@ -74,10 +74,8 @@ select_entropy <- function(entropy_df, method, amount, random_selection){
   }
   
   # Find appropriate quantile threshold
-  else if(method == "0.25_quant_entropy"){
-    quantile <- quantile(entropy_df$entropy, 0.25)
-  }else if(method == "0.5_quant_entropy"){
-    quantile <- quantile(entropy_df$entropy, 0.5)
+  else if(method == "0.95_quant_entropy"){
+    quantile <- quantile(entropy_df$entropy, 0.95)
   }else if(method == "0.75_quant_entropy"){
     quantile <- quantile(entropy_df$entropy, 0.75)
   }
@@ -123,12 +121,10 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
   
 
   # Find appropriate quantile threshold
-  else if(method == "0.25_quant_maxp"){
+  else if(method == "0.05_quant_maxp"){
+    quantile <- quantile(maxp_df$maxp, 0.05)
+  }else if(method == "0.25_quant_maxp"){
     quantile <- quantile(maxp_df$maxp, 0.25)
-  }else if(method == "0.5_quant_maxp"){
-    quantile <- quantile(maxp_df$maxp, 0.5)
-  }else if(method == "0.75_quant_maxp"){
-    quantile <- quantile(maxp_df$maxp, 0.75)
   }
 
   # Filter cells based on quantiles
@@ -157,7 +153,7 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
   cells
 }
 
-select_cells_classifier <- function(df_expression, markers, selection_method, amount = 10, 
+select_cells_classifier <- function(df_expression, AL_method, selection_method, amount = 10, 
                                     random_selection, selection_criterion = "entropy") {
   annotated_cells <- df_expression %>% 
     filter(!is.na(cell_type)) %>% 
@@ -166,13 +162,14 @@ select_cells_classifier <- function(df_expression, markers, selection_method, am
   left_cells <- df_expression %>% 
     filter(is.na(cell_type))
   
-  multiNomModelFit <- train(cell_type ~ ., 
-                            data = annotated_cells[, c(markers, "cell_type")], 
-                            method = "multinom",
-                            trace = FALSE)
+  ModelFit <- train(cell_type ~ ., 
+                    data = select(annotated_cells, -X1),
+                    method = AL_method,
+                    trace = FALSE)
   
   predicted_scores <- predict(multiNomModelFit, 
-                              left_cells[, markers], type = "prob")
+                              select(left_cells, -X1, -cell_type),
+                              type = "prob")
   
   if(selection_criterion == "entropy"){
     entropies <- apply(predicted_scores, 1, calculate_entropy)
@@ -228,17 +225,17 @@ cell_ranking_wrapper <- function(df, markers){
 }
 
 
-active_learning_wrapper <- function(df, unique_markers, selection_method, iteration, 
+active_learning_wrapper <- function(df, AL_method, selection_method, iteration, 
                                     entropies = NULL, random_selection, selection_criterion = "entropy"){
   # AL selected cells
   AL <- select_cells_classifier(df_expression = df, 
-                                markers = unique_markers, 
+                                AL_method = AL_method, 
                                 selection_method = selection_method,
                                 amount = 10, 
                                 random_selection = random_selection,
                                 selection_criterion = selection_criterion)
   
-  list(new_cells = AL$selected_cells, entropies = AL$entropy_table)
+  list(new_cells = AL$selected_cells, criterion_table = AL$criterion_table)
 }
 
 
@@ -297,30 +294,40 @@ createHeatmap <- function(sce,
 
 
 
-cell_type_colours <- function() {
+cell_type_colours <- function(modality) {
   pal <- c("#8B5B42", "#AF4EA9", "#FFB60A", "#0AC694", "#0024DD", "#6CC1FF",
            "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d", '#FD4FBD')
   
-  celltype_colours <- c(
+  scRNASeq_colours <- c(
     "B cell" = pal[2],
+    "Cytotoxic T cell" = pal[3],
+    "CD4+ T cell" = pal[12],
+    "CD16+ monocyte" = pal[4],
+    "Dendritic cell" = pal[5],
+    "CD14+ monocyte" = pal[8], 
+    "Megakaryocyte" = pal[9],
+    "Natural killer cell" = pal[10],
+    "Plasmacytoid dendritic cell" = pal[6],
+    'unassigned' = "grey60"
+  )
+  CyTOF_colours <- c(
     "B-cell Frac A-C (pro-B cells)" = pal[2],
     "IgD- IgMpos B cells" = pal[11],
     "IgM- IgD- B-cells" = pal[13],
-    "Cytotoxic T cell" = pal[3],
     "CMP" = pal[3],
-    "CD4+ T cell" = pal[12],
-    "CD16+ monocyte" = pal[4],
     'GMP' = pal[4],
-    "Dendritic cell" = pal[5],
-    "Plasmacytoid dendritic cell" = pal[6],
-    "CD14+ monocyte" = pal[8], 
     "CLP" = pal[8],
-    "Megakaryocyte" = pal[9],
     "MPP" = pal[9],
-    "Natural killer cell" = pal[10],
     'unassigned' = "grey60"
   )
-  celltype_colours
+  
+  if(modality == "scRNASeq"){
+    scRNASeq_colours
+  }else if(modality == "snRNASeq"){
+    
+  }else if(modality == "CyTOF"){
+    CyTOF_colours
+  }
 }
 
 
