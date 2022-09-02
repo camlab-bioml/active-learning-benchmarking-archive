@@ -7,6 +7,9 @@ source("pipeline/whatsthatcell-helpers.R")
 #save.image('debug-AL')
 set.seed(42)
 
+### [ PARAMS ] #####
+max_AL_iterations <- as.integer(snakemake@params[['max_cell_num']]) / 10
+
 ### [ LOAD & PROCESS DATA ] #####
 markers <- read_yaml(snakemake@input[['markers']])
 unique_markers <- unique(unlist(markers$cell_types))
@@ -47,22 +50,23 @@ if(as.numeric(snakemake@wildcards[['corrupt']]) != 0){
 }
 
 # Get list of cell types
-all_cell_types <- sce$CellType %>% unique()
+all_cell_types <- sce$CellType |> 
+  unique()
 
 # Get number of iterations to run ranked assignment for
-iterations <- ((nrow(df_expression) - 2*length(all_cell_types)) / length(all_cell_types)) - 1
-
+# iterations <- ((nrow(df_expression) - 2*length(all_cell_types)) / length(all_cell_types)) - 1
 
 ### [ RANKED CELL TYPE ASSIGNMENT ] #####
-for(i in 1:iterations){
-  # Get initial set of cells based on their marker expression ranking
-  df_expression <- cell_ranking_wrapper(df_expression, markers)
-  
-  if(all(all_cell_types %in% unique(df_expression$cell_type))){
-    print('ranking done')
-    break
-  }
-}
+# for(i in 1:iterations){
+#   # Get initial set of cells based on their marker expression ranking
+#   df_expression <- cell_ranking_wrapper(df_expression, markers)
+#   
+#   if(all(all_cell_types %in% unique(df_expression$cell_type))){
+#     print('ranking done')
+#     break
+#   }
+# }
+df_expression <- cell_ranking_wrapper(df_expression, markers)
 
 ### [ ACTIVE LEARNING CELL TYPE ASSIGNMENT ] #####
 if(snakemake@wildcards[['AL_type']] == 'Active-Learning_maxp'){
@@ -70,32 +74,51 @@ if(snakemake@wildcards[['AL_type']] == 'Active-Learning_maxp'){
 }else if(snakemake@wildcards[['AL_type']] == 'Active-Learning_entropy'){
   criterion <- "entropy"
 }
+
 # create a list to save all entropies into
 entropies <- list()
-for(i in 1:nrow(df_expression)){
-  AL <- active_learning_wrapper(df_expression, 
-                                unique_markers, 
+
+# Remove genes with 0 expression
+df_expression <- df_expression[, c(TRUE, 
+                                   colSums(df_expression[,2:(ncol(df_expression)-4)]) > 0,
+                                   rep(TRUE, 4))]
+
+# Calculate PCA embedding
+df_PCA <- select(df_expression, -c(X1, cell_type, iteration, gt_cell_type, corrupted)) |> 
+  as.matrix() |> 
+  prcomp(center = TRUE, scale. = TRUE)
+
+df_PCA <- df_PCA$x |> 
+  as.data.frame()
+
+df_PCA <- bind_cols(
+  tibble(X1 = df_expression$X1),
+  df_PCA[,1:min(20, ncol(df_PCA))], 
+  tibble(cell_type = df_expression$cell_type,
+         gt_cell_type = df_expression$gt_cell_type)
+)
+
+for(i in 1:max_AL_iterations){
+  AL <- active_learning_wrapper(select(df_PCA, -gt_cell_type), 
+                                snakemake@wildcards[['AL_alg']], 
                                 snakemake@wildcards[['strat']], 
                                 i, 
                                 entropies, 
                                 as.numeric(snakemake@wildcards[['rand']]),
                                 criterion)
 
-  entropies[[length(entropies) + 1]] <- AL$entropies
+  entropies[[length(entropies) + 1]] <- AL$criterion_table
   
   # What index do the selected cells correspond to?
-  to_assign_index <- match(AL$new_cells, df_expression$X1)
+  to_assign_index <- match(AL$new_cells, df_PCA$X1)
   
   # Get ground truth labels based on the index
-  df_expression$cell_type[to_assign_index] <- df_expression$gt_cell_type[to_assign_index]
-  df_expression$iteration[to_assign_index] <- i
+  df_PCA$cell_type[to_assign_index] <- df_PCA$gt_cell_type[to_assign_index]
+  df_PCA$iteration[to_assign_index] <- i
   
   not_annotated <- filter(df_expression, is.na(cell_type)) %>% 
     nrow()
-  
-  #if(not_annotated %% 10 == 0){
-  print(not_annotated)
-  #}
+
   if(not_annotated < 10){
     break
   }
@@ -107,19 +130,25 @@ for(i in 1:nrow(df_expression)){
 entropies %>% 
   bind_rows() %>% 
   as_tibble() %>% 
+  mutate(method = paste0("Active-Learning-groundTruth-strategy-", 
+                         snakemake@wildcards[['strat']], '-AL_alg-', 
+                         snakemake@wildcards[['AL_alg']], '-randomCells-', 
+                         snakemake@wildcards[['rand']], '-corrupted-', 
+                         snakemake@wildcards[['corrupt']])) %>% 
   write_tsv(snakemake@output[['entropy']])
 
 original_cell_types <- tibble(cell_id = colnames(sce),
                               cell_type = sce$CellType)
 
-df_expression %>% 
+df_PCA %>% 
+  select(X1, cell_type, iteration) %>%
   dplyr::rename("cell_id" = "X1", 
                 "corrupted_cell_type" = "cell_type") %>% # this is the field iteratively filled in by AL, thus may be corrupted
   left_join(original_cell_types, by = 'cell_id') %>% 
-  select(cell_id, cell_type, corrupted_cell_type, iteration) %>% 
   filter(!is.na(corrupted_cell_type)) %>% 
   mutate(method = paste0("Active-Learning-groundTruth-strategy-", 
-                         snakemake@wildcards[['strat']], '-randomCells-', 
+                         snakemake@wildcards[['strat']], '-AL_alg-', 
+                         snakemake@wildcards[['AL_alg']], '-randomCells-', 
                          snakemake@wildcards[['rand']], '-corrupted-', 
                          snakemake@wildcards[['corrupt']])) %>% 
   write_tsv(snakemake@output[['assignments']])
