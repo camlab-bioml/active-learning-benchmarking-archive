@@ -4,7 +4,6 @@ library(yaml)
 library(SingleCellExperiment)
 library(tidyverse)
 source("pipeline/whatsthatcell-helpers.R")
-#save.image('debug-AL')
 set.seed(42)
 
 ### [ PARAMS ] #####
@@ -21,7 +20,6 @@ if(TRUE %in% grepl("CD16_32", rownames(sce))){
 
 df_expression <- load_scs(sce)
 df_expression$cell_type <- NA
-df_expression$iteration <- NA
 df_expression$gt_cell_type <- sce$CellType
 df_expression$corrupted <- NA
 
@@ -95,11 +93,12 @@ df_PCA <- bind_cols(
   tibble(X1 = df_expression$X1),
   df_PCA[,1:min(20, ncol(df_PCA))], 
   tibble(cell_type = df_expression$cell_type,
-         gt_cell_type = df_expression$gt_cell_type)
+         gt_cell_type = df_expression$gt_cell_type,
+         iteration = NA)
 )
 
 for(i in 1:max_AL_iterations){
-  AL <- active_learning_wrapper(select(df_PCA, -gt_cell_type), 
+  AL <- active_learning_wrapper(select(df_PCA, -gt_cell_type, -iteration), 
                                 snakemake@wildcards[['AL_alg']], 
                                 snakemake@wildcards[['strat']], 
                                 i, 
@@ -116,14 +115,13 @@ for(i in 1:max_AL_iterations){
   df_PCA$cell_type[to_assign_index] <- df_PCA$gt_cell_type[to_assign_index]
   df_PCA$iteration[to_assign_index] <- i
   
-  not_annotated <- filter(df_expression, is.na(cell_type)) %>% 
+  not_annotated <- filter(df_PCA, is.na(cell_type)) %>% 
     nrow()
-
+  print(i)
   if(not_annotated < 10){
     break
   }
 }
-
 
 
 ### [ SAVE OUTPUT ] #####

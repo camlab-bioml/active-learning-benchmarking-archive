@@ -167,7 +167,7 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
                     method = AL_method,
                     trace = FALSE)
   
-  predicted_scores <- predict(multiNomModelFit, 
+  predicted_scores <- predict(ModelFit, 
                               select(left_cells, -X1, -cell_type),
                               type = "prob")
   
