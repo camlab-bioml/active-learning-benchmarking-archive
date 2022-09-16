@@ -41,9 +41,3 @@ subset_sce <- sce[, createDataPartition(sce$cell_type, p = 0.1)$Resample1]
 # subset_sce <- subset_sce[ , !(subset_sce$cell_type %in% cell_types_remove)]
 
 saveRDS(subset_sce, snakemake@output[['Levine_CyTOF']])
-
-
-
-### QUESTIONS
-# - should I be normalizing these data?
-# - Can I normalize after removal of unassigned?

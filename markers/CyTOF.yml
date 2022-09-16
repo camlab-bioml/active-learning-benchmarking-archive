@@ -219,7 +219,7 @@ cell_types:
   #     - CD43
   #     - 120g8
 
-  IdD neg IgM pos B cells:
+  IgD- IgMpos B cells:
     positive:
       - IgM
       - B220
@@ -228,7 +228,7 @@ cell_types:
       - CD43
       - 120g8
 
-  IgD neg IgM neg B cells:
+  IgM- IgD- B-cells:
     positive:
       - B220
     negative: 
@@ -237,7 +237,7 @@ cell_types:
       - CD43
       - 120g8
 
-  Fraction A-C (pro-B cells):
+  B-cell Frac A-C (pro-B cells):
     positive:
       - CD43
       - B220
