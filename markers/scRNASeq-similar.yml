@@ -1,0 +1,38 @@
+cell_types:
+    Cytotoxic T cell:
+        positive:
+            - CD3D
+            - CD3E
+            - CD3G
+            - TRAC
+            - CD8A
+            - CD8B
+            - GZMK
+            - CCL5
+            - NKG7
+        negative:
+            - CD4
+            - FCER1G
+    
+    Natural killer cell:
+        positive:
+            - NCAM1
+            - NKG7
+            - KLRB1
+            - KLRD1
+            - KLRF1
+            - KLRC1
+            - KLRC2
+            - KLRC3
+            - KLRC4
+            - FCGR3A
+            - FCGR3B
+            - ITGAL
+            - ITGAM
+            - FCER1G
+        negative:
+            - CD3D
+            - CD3E
+            - CD3G
+            - CD14
+            - TRAC

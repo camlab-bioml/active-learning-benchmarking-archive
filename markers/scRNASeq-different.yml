@@ -1,0 +1,41 @@
+cell_types:
+    Cytotoxic T cell:
+        positive:
+            - CD3D
+            - CD3E
+            - CD3G
+            - TRAC
+            - CD8A
+            - CD8B
+            - GZMK
+            - CCL5
+            - NKG7
+        negative:
+            - CD4
+            - FCER1G
+
+    CD14+ monocyte:
+        positive:
+            - VCAN
+            - FCN1
+            - S100A8
+            - S100A9
+            - CD14
+            - ITGAL
+            - ITGAM
+            - CSF3R
+            - CSF1R
+            - CX3CR1
+            - TYROBP
+            - LYZ
+            - S100A12
+        negative:
+            - FCGR3A
+            - FCGR3B
+            - CD3D
+            - CD3E
+            - CD3G
+            - TRAC
+            - NKG7
+            - KLRB1
+            - KLRD1
