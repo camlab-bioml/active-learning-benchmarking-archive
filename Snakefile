@@ -8,7 +8,7 @@ configfile: 'config/config.yml'
 output = 'output/' + config['version'] + '/'
 
 AL_methods = ['multinom', 'rf']
-selection_procedures = ['random', 'Seurat-clustering', 'Active-Learning_entropy', 'Active-Learning_maxp']
+selection_procedures = ['random', 'Seurat-clustering', 'Ranked-Active-Learning_entropy', 'Ranked-Active-Learning_maxp', 'Random-Active-Learning_entropy', 'Random-Active-Learning_maxp']
 evaluation_methods_dict = {
     'scRNASeq': ['scmap-cluster', 'scmap-sc', 'singleR', 'Random-Forest'], 
     'CyTOF': ['CyTOF-LDA', 'Random-Forest'],
@@ -19,14 +19,16 @@ train_test_seeds = list(range(10))
 annotators = ['GroundTruth']
 modalities = ['scRNASeq', 'CyTOF', 'snRNASeq']
 data_splits = ['train', 'test']
+initial_selections = ['ranking', 'random']
 
 # Seurat params
 Seurat_neighbors = [10,20,30]
 Seurat_resolution = [0.4,0.8,1.2]
 
 random_sets = ['set1']
-cell_numbers = [100, 250, 500, 900]
+cell_numbers = [100, 250, 500]
 corruption_percentages = [0, 0.1, 0.2, 0.3, 1]
+random_percentages = [0, 0.25, 0.5, 0.75]
 
 
 # Get markers for each cohort
@@ -83,7 +85,7 @@ rule all:
     input:
         process_data_output.values(),
         #cell_type_predictions.values(),
-        #active_learner.values(),
+        active_learner.values(),
         #viz.values(),
         #pred_lab.values(),
         #imbalance.values(),

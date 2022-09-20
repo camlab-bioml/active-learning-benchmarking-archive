@@ -3,7 +3,7 @@
 ### [ ACTIVE LEARNING ] #####
 select_initial_cells <- function(df_expression,
                                  marker_dict,
-                                 number_cells = 10) {
+                                 number_cells = 20) {
   
   cell_types <- names(marker_dict)
   
@@ -181,7 +181,7 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
   
   training_set_size <- nrow(annotated_cells)
   if(training_set_size < 50){
-    bootstrap_reps <- 300
+    bootstrap_reps <- 1000
   }else if(training_set_size >=50 | training_set_size < 100){
     bootstrap_reps <- 50
   }else{
@@ -240,7 +240,7 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
 }
 
 
-cell_ranking_wrapper <- function(df, markers, number_cells = 10){
+cell_ranking_wrapper <- function(df, markers, number_cells = 20){
   # Get initial set of cells based on their marker expression ranking
   ranked_cells <- select_initial_cells(df, markers$cell_types, number_cells)
   
