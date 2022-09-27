@@ -30,24 +30,37 @@ selected_cells <- read_tsv("data/CyTOF/Active-Learning/AL-batches-subset/Active-
 df_expression <- load_scs(sce)
 df_expression$cell_type <- sce$CellType
 
-# Separate into labelled and unlabeled 
-labelled <- df_expression %>% 
-  filter(X1 %in% selected_cells$cell_id) %>% 
-  select(all_of(c(markers, "X1", "cell_type")))
+df_PCA <- select(df_expression, -X1) |> 
+  as.matrix() |> 
+  prcomp(center = TRUE, scale. = TRUE)
 
-unlabeled <- df_expression %>% 
-  filter(!(X1 %in% selected_cells$cell_id)) %>% 
-  select(all_of(c(markers, "X1", "cell_type")))
+df_PCA <- df_PCA$x |> 
+  as.data.frame()
+
+df_PCA <- bind_cols(
+  tibble(X1 = df_expression$X1),
+  df_PCA[,1:20], 
+  tibble(cell_type = sce$CellType)
+)
+
+# Separate into labelled and unlabeled 
+labelled <- df_PCA %>% 
+  filter(X1 %in% selected_cells$cell_id)
+
+unlabeled <- df_PCA %>% 
+  filter(!(X1 %in% selected_cells$cell_id))
 
 ### [ TRAIN AND PREDICT ] #####
 # Train LR on labelled subset
 multiNomModelFit <- train(cell_type ~ .,
-                          data = labelled[, c(markers, "cell_type")],
+                          data = select(labelled, -X1),
                           method = "multinom",
                           trace = FALSE)
 
 # Predict probabilities
-unlabeled_pred <- predict(multiNomModelFit, unlabeled[, markers], type = "prob")
+unlabeled_pred <- predict(multiNomModelFit,
+                          select(unlabeled, -X1, -cell_type), 
+                          type = "prob")
 
 ## Calculate entropy and max probability
 entropy <- apply(unlabeled_pred, 1, calculate_entropy)

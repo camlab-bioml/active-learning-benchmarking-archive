@@ -80,10 +80,10 @@ calculate_entropy <- function(predictions) {
 select_entropy <- function(entropy_df, method, amount, random_selection){
   # Determine how many cells should be selected non-randomly
   select_amount <- round(amount * (1-random_selection), 0)
-
+  
   # Determine how many cells should be selected randomly
   random_amount <- amount - select_amount
-
+  
   # Select the cells with the highest entropy
   if(method == "highest_entropy"){
     cells <- c(entropy_df[order(entropy_df$entropy, 
@@ -109,7 +109,7 @@ select_entropy <- function(entropy_df, method, amount, random_selection){
       cells <- ordered_cells$X1
     }
   }
-
+  
   # Randomly select additional cells
   if(random_selection != 0){
     if(nrow(entropy_df) > random_amount){
@@ -136,20 +136,20 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
     cells <- maxp_df[order(maxp_df$maxp, decreasing = F),][1:select_amount, ]$X1
   }
   
-
+  
   # Find appropriate quantile threshold
   else if(method == "0.05_quant_maxp"){
     quantile <- quantile(maxp_df$maxp, 0.05)
   }else if(method == "0.25_quant_maxp"){
     quantile <- quantile(maxp_df$maxp, 0.25)
   }
-
+  
   # Filter cells based on quantiles
   if(grepl("_quant_maxp", method)){
     ordered_cells <- select(maxp_df, X1, maxp) %>%
       arrange(maxp) %>%
       filter(maxp > quantile)
-
+    
     if(nrow(ordered_cells) > amount){
       cells <- ordered_cells$X1[1:select_amount]
     }else{
@@ -187,7 +187,6 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
   }else{
     bootstrap_reps <- 25
   }
-
   tctrl <- trainControl(method = "boot", number = bootstrap_reps)
   ModelFit <- train(cell_type ~ ., 
                     data = select(annotated_cells, -X1),
@@ -232,7 +231,7 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
                                   no_cells_annotated = nrow(annotated_cells),
                                   criterion = selection_criterion)
   }
-
+  
   
   return_list <- list(selected_cells = selected_cells, 
                       criterion_table = criterion_table)
@@ -248,7 +247,7 @@ cell_ranking_wrapper <- function(df, markers, number_cells = 20){
   to_assign_index <- match(ranked_cells, df$X1)
   df$cell_type[to_assign_index] <- df$gt_cell_type[to_assign_index]
   df$iteration <- 0
-
+  
   df
 }
 

@@ -20,7 +20,9 @@ source("../../pipeline/whatsthatcell-helpers.R")
 ```
 
 ```{r}
-acc <- read_tsv(params$acc)
+acc <- read_tsv(params$acc) |>
+  filter(corrupted == 0) |>
+  filter(rand == 0 | is.na(rand))
 
 cell_nums <- as.character(sort(unique(acc$cell_num)))
 acc$cell_num <- factor(acc$cell_num, levels = cell_nums)
