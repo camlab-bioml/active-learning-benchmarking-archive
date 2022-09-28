@@ -289,6 +289,138 @@ corrupt_labels <- function(df_expression, all_cell_types, prop_corrupt){
 }
 
 
+### [ REMOVING CELL TYPES ] #####
+# Used to read in a sce and convert to PCA/expression
+create_features <- function(sce_path){
+  sce <- readRDS(sce_path)
+  if(any(grepl("CD16_32", rownames(sce)))){
+    rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
+  }
+  
+  df_expression <- load_scs(sce)
+  df_expression$cell_type <- NA
+  df_expression$iteration <- NA
+  df_expression$gt_cell_type <- sce$CellType
+  
+  # Remove genes with 0 expression
+  df_expression <- df_expression[, c(TRUE, 
+                                     colSums(df_expression[,2:(ncol(df_expression)-3)]) > 0,
+                                     rep(TRUE, 3))]
+  
+  df_PCA <- select(df_expression, -c(X1, cell_type, iteration, gt_cell_type)) |> 
+    as.matrix() |> 
+    prcomp(center = TRUE, scale. = TRUE)
+  
+  df_PCA <- df_PCA$x |> 
+    as.data.frame()
+  
+  df_PCA <- bind_cols(
+    tibble(X1 = df_expression$X1),
+    df_PCA[,1:min(20, ncol(df_PCA))], 
+    tibble(gt_cell_type = df_expression$gt_cell_type, # This is where the ground truth labels are stored
+           iteration = df_expression$iteration)
+  )
+  
+  list(expression = df_expression, PCA = df_PCA)
+}
+
+rem_cell_type_AL_wrapper <- function(df, AL_alg, strat, rand, criterion, iter = 3){
+  set.seed(1)
+  entropies <- list()
+  for(i in 1:iter){
+    AL <- active_learning_wrapper(select(df, -gt_cell_type, -iteration), 
+                                  AL_alg,
+                                  strat,
+                                  i, 
+                                  entropies, 
+                                  rand,
+                                  criterion)
+    
+    entropies[[length(entropies) + 1]] <- AL$criterion_table
+    
+    # What index do the selected cells correspond to?
+    to_assign_index <- match(AL$new_cells, df$X1)
+    
+    # Get ground truth labels based on the index
+    df$cell_type[to_assign_index] <- df$gt_cell_type[to_assign_index]
+    df$iteration[to_assign_index] <- i
+  }
+  entropies
+}
+
+get_training_type_rem <- function(df, initial, markers, needed_cells = 20){
+  selected_cells <- 0
+  discarded_cells <- c()
+  
+  selected_cells_df <- tibble(
+    X1 = character(),
+    cell_type = character()
+  )
+  
+  # This loop iteratively runs until the determined size of the training set has been found
+  # Cells that are of the cell type that is not selected are then removed
+  while(selected_cells < needed_cells){
+    left_to_rank_num <- needed_cells - selected_cells
+    
+    if(initial == "ranking"){
+      df <- cell_ranking_wrapper(df, 
+                                 markers, 
+                                 left_to_rank_num) |> 
+        filter(cell_type != cell_type_to_rem  | is.na(cell_type))
+    }else if(initial == "random"){
+      random_cell_idx <- sample(1:nrow(df), left_to_rank_num)
+      df$cell_type[random_cell_idx] <- df$gt_cell_type[random_cell_idx]
+      
+      df <- filter(df, cell_type != cell_type_to_rem  | is.na(cell_type))
+    }
+    
+    # Save selected cells minus cells to remove
+    selected_cells_df <- bind_rows(
+      selected_cells_df,
+      filter(df, !is.na(cell_type)) |> 
+        select(X1, cell_type)
+    )
+    
+    # Remove already selected cells so that new cells are selected with new ranking
+    df <- filter(df, is.na(cell_type))
+    
+    # How many cells have been selected total?
+    selected_cells <- nrow(selected_cells_df)
+  }
+  selected_cells_df
+}
+
+get_training_type_kept <- function(df, cell_type_to_rem, initial, markers,
+                                   selected_cells_df){
+  # Find the set of cells of the type that were removed above with the highest marker expression
+  missing_df_expression <- filter(df, gt_cell_type == cell_type_to_rem)
+  
+  if(initial == "ranking"){
+    # Which 3 cells of this type are selected by ranking?
+    missing_df_expression <- cell_ranking_wrapper(missing_df_expression, 
+                                                  markers, 3) |> 
+      filter(!is.na(cell_type)) |> 
+      select(X1, cell_type)
+  }else if(initial == "random"){
+    random_cell_idx <- sample(1:nrow(missing_df_expression), 3)
+    missing_df_expression$cell_type[random_cell_idx] <- missing_df_expression$gt_cell_type[random_cell_idx]
+    
+    missing_df_expression <- filter(missing_df_expression, !is.na(cell_type)) |> 
+      select(X1, cell_type)
+  }
+  
+  # Create three datasets with 1, 2 and 3 cells of the removed type
+  kept_cell_type <- lapply(1:3, function(x){
+    bind_rows(
+      slice_head(selected_cells_df, n = (nrow(selected_cells_df) - x)), # original dataset with cell type removed
+      slice_head(missing_df_expression, n = x) # Dataset created with only said cell type
+    ) |> mutate(num_missing_cells = x)
+  })
+  
+  kept_cell_type
+}
+
+
 ### [ ACCURACIES ] #####
 acc_wrap <- function(tt) {
   cell_types <- unique(union(tt$predicted_cell_type, tt$annotated_cell_type))
