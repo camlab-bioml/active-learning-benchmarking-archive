@@ -1,0 +1,291 @@
+---
+title: "Cross cohort evaluation"
+output: html_document
+date: "2022-09-07"
+params:
+    accs: "../../output/v6/results/overall-CyTOF-benchmarking-accuracies.tsv ../../output/v6/results/overall-scRNASeq-benchmarking-accuracies.tsv ../../output/v6/results/overall-snRNASeq-benchmarking-accuracies.tsv" 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(patchwork)
+  library(scales)
+})
+source("../../pipeline/whatsthatcell-helpers.R")
+```
+
+## Overall benchmark
+
+```{r fig.width=14, fig.height=9}
+f <- strsplit(params$accs, " ")[[1]]
+acc <- lapply(f, function(x){
+  df <- read_tsv(x) |> 
+    mutate(cohort = case_when(grepl("CyTOF", basename(x)) ~ "CyTOF",
+                              grepl("snRNASeq", basename(x)) ~ "snRNASeq",
+                              grepl("scRNASeq", basename(x)) ~ "scRNASeq"))
+  df
+}) |> bind_rows()
+
+sel_meth_cols <- hue_pal()(8)
+names(sel_meth_cols) <- unique(acc$selection_procedure)
+
+get_ranked_mean_estimate_by_cohort <- function(acc){
+  lapply(unique(acc$cohort), function(x){
+    mean_estimate <- filter(acc, cohort == x) |> 
+      group_by(selection_procedure) |> 
+      summarise(mean_estimate = mean(na.omit(.estimate))) |> 
+      arrange(-mean_estimate)
+    
+    mean_estimate$rank <- 1:nrow(mean_estimate)
+    select(mean_estimate, -mean_estimate) |> 
+      mutate(cohort = x)
+  }) |> 
+    bind_rows()
+}
+
+get_cross_cohort_mean_ranked_estimate <- function(acc){
+  acc |> 
+    group_by(selection_procedure) |> 
+    summarise(mean_rank = mean(rank)) |> 
+    arrange(-mean_rank)
+}
+
+
+### Functions
+al_selection <- function(acc, metric, active_learner, initial_sel){
+  sel_acc <- filter(acc, corrupted == 0) |> 
+    filter(rand == 0 | is.na(rand)) |> 
+    filter(.metric == metric) |> 
+    filter(initial == initial_sel | is.na(initial))
+  
+  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
+  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
+    pull(selection_procedure)
+  
+  sel_acc |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    ggplot() +
+    aes(x = as.character(cell_num), y = .estimate, fill = selection_procedure) +
+    geom_boxplot() +
+    scale_fill_manual(values = sel_meth_cols) +
+    whatsthatcell_theme() +
+    facet_grid(.metric ~ cohort) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
+  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel)
+  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel)
+  kap <- al_selection(acc, "kap", AL_alg, initial_sel)
+  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel)
+  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel)
+  
+  (bal_acc / f1 / kap / mcc / sens) +
+    plot_layout(guides = "collect") +
+    plot_annotation(title = title)
+}
+
+full_acc_plot_wrapper(acc, "rf", "ranking", "RF - initial selection: ranked")
+
+full_acc_plot_wrapper(acc, "rf", "random", "RF - initial selection: random")
+
+full_acc_plot_wrapper(acc, "multinom", "ranking", "LR - initial selection: ranked")
+
+full_acc_plot_wrapper(acc, "multinom", "random", "LR - initial selection: random")
+```
+
+
+
+```{r fig.width=16, fig.height=10}
+rf_or_lr <- function(acc, metric, initial_sel){
+  sel_acc <- filter(acc, corrupted == 0) |> 
+    filter(rand == 0 | is.na(rand)) |> 
+    filter(.metric == metric) |> 
+    filter(initial == initial_sel | is.na(initial)) |> 
+    filter(selection_procedure != "random" & selection_procedure != "Seurat_clustering")
+  
+  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
+  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
+    pull(selection_procedure)
+
+  sel_acc |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    ggplot() +
+    aes(x = selection_procedure, y = .estimate, fill = AL_alg) +
+    geom_boxplot() +
+    whatsthatcell_theme() +
+    facet_grid(.metric ~ cohort + cell_num) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+rf_or_lr_wrapper <- function(acc, initial_sel){
+  bal_ac <- rf_or_lr(acc, "bal_accuracy", initial_sel)
+  f1 <- rf_or_lr(acc, "f_meas", initial_sel)
+  kap <- rf_or_lr(acc, "kap", initial_sel)
+  mcc <- rf_or_lr(acc, "mcc", initial_sel)
+  sens <- rf_or_lr(acc, "sensitivity", initial_sel)
+  
+  (bal_ac / f1 / kap / mcc / sens) +
+    plot_layout(guides = "collect")
+}
+
+rf_or_lr_wrapper(acc, "ranking")
+rf_or_lr_wrapper(acc, "random")
+```
+
+
+```{r}
+random_or_ranked <- function(acc, metric, AL_alg){
+  sel_acc <- filter(acc, corrupted == 0) |> 
+    filter(rand == 0 | is.na(rand)) |> 
+    filter(.metric == metric) |> 
+    filter(AL_alg == AL_alg | is.na(AL_alg)) |> 
+    filter(selection_procedure != "random" & selection_procedure != "Seurat_clustering")
+  
+  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
+  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
+    pull(selection_procedure)
+
+  sel_acc |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    ggplot() +
+    aes(x = selection_procedure, y = .estimate, fill = initial) +
+    geom_boxplot() +
+    whatsthatcell_theme() +
+    facet_grid(.metric ~ cohort + cell_num) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+random_or_ranked_wrapper <- function(acc, AL_alg){
+  bal <- random_or_ranked(acc, "bal_accuracy", AL_alg)
+  f1 <- random_or_ranked(acc, "f_meas", AL_alg)
+  kap <- random_or_ranked(acc, "kap", AL_alg)
+  mcc <- random_or_ranked(acc, "mcc", AL_alg)
+  sens <- random_or_ranked(acc, "sensitivity", AL_alg)
+  
+  (bal / f1 / kap / mcc / sens) +
+    plot_layout(guides = "collect")
+}
+
+random_or_ranked_wrapper(acc, "rf")
+random_or_ranked_wrapper(acc, "multinom")
+```
+
+## Effect of corruption
+
+Should these be over all methods or just best performing?
+
+```{r fig.width=14, fig.height=9}
+plot_corruption <- function(acc, metric, initial_sel){
+  sel_acc <- filter(acc, rand == 0) |> 
+    filter(.metric == metric) |> 
+    filter(initial == initial_sel)
+  
+  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
+  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
+    pull(selection_procedure)
+  
+  sel_acc |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    ggplot() +
+    aes(x = selection_procedure, y = .estimate, fill = as.character(corrupted)) +
+    geom_boxplot() +
+    whatsthatcell_theme() +
+    facet_grid(.metric ~ cohort) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+corruption_wrapper <- function(acc, initial_sel){
+  bal_ac <- plot_corruption(acc, "bal_accuracy", initial_sel)
+  f1 <- plot_corruption(acc, "f_meas", initial_sel)
+  kap <- plot_corruption(acc, "kap", initial_sel)
+  mcc <- plot_corruption(acc, "mcc", initial_sel)
+  sens <- plot_corruption(acc, "sensitivity", initial_sel)
+  
+  (bal_ac / f1 / kap / mcc / sens) +
+    plot_layout(guides = "collect")
+
+}
+
+corruption_wrapper(acc, 'random')
+corruption_wrapper(acc, 'ranking')
+
+acc |> 
+  filter(rand == 0 & initial == "random") |> 
+  ggplot() +
+  aes(x = as.character(corrupted), y = .estimate, fill = AL_alg) +
+  geom_boxplot() +
+  whatsthatcell_theme() +
+  facet_grid(.metric ~ cohort + cell_num) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+acc |> 
+  filter(rand == 0 & initial == "ranking") |> 
+  ggplot() +
+  aes(x = as.character(corrupted), y = .estimate, fill = AL_alg) +
+  geom_boxplot() +
+  whatsthatcell_theme() +
+  facet_grid(.metric ~ cohort + cell_num) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+## Effect of random sampling
+
+```{r fig.width=14, fig.height=9}
+plot_random <- function(acc, metric, initial_sel){
+  sel_acc <- filter(acc, corrupted == 0 & !is.na(rand)) |> 
+    filter(.metric == metric) |> 
+    filter(initial == initial_sel)
+  
+  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
+  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
+    pull(selection_procedure)
+  
+  sel_acc |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    ggplot() +
+    aes(x = selection_procedure, y = .estimate, fill = as.character(rand)) +
+    geom_boxplot() +
+    whatsthatcell_theme() +
+    facet_grid(.metric ~ cohort) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+random_wrapper <- function(acc, initial_sel){
+  bal_ac <- plot_random(acc, "bal_accuracy", initial_sel)
+  f1 <- plot_random(acc, "f_meas", initial_sel)
+  kap <- plot_random(acc, "kap", initial_sel)
+  mcc <- plot_random(acc, "mcc", initial_sel)
+  sens <- plot_random(acc, "sensitivity", initial_sel)
+  
+  (bal_ac / f1 / kap / mcc / sens) +
+    plot_layout(guides = "collect")
+}
+
+random_wrapper(acc, "ranking")
+random_wrapper(acc, "random")
+
+acc |> 
+  filter(corrupted == 0 & !is.na(rand)) |> 
+  filter(initial == "random") |> 
+  ggplot() +
+  aes(x = as.character(rand), y = .estimate, fill = AL_alg) +
+  geom_boxplot() +
+  whatsthatcell_theme() +
+  facet_grid(.metric ~ cohort + cell_num) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  
+acc |> 
+  filter(corrupted == 0 & !is.na(rand)) |> 
+  filter(initial == "ranking") |> 
+  ggplot() +
+  aes(x = as.character(rand), y = .estimate, fill = AL_alg) +
+  geom_boxplot() +
+  whatsthatcell_theme() +
+  facet_grid(.metric ~ cohort + cell_num) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
