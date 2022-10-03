@@ -5,8 +5,10 @@ params:
   markers: "../../markers/CyTOF.yml"
   random_files_path: "../../data/CyTOF/random/"
   seurat_files_path: "../../data/CyTOF/Seurat-clustering/"
-  AL_files_path: "../../data/CyTOF/Active-Learning/AL-batches-subset"
+  AL_entropy_path: "../../data/CyTOF/Active-Learning/AL-batches-subset"
+  AL_maxp_path: ""
   sce: "../../data/CyTOF/CyTOF-train.rds"
+  modality: ""
 ---
 
 ```{r setup, include=FALSE}
@@ -25,7 +27,7 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 
 ```{r message = F}
-if(params$modality == "scRNASeq"){
+if(params$modality == "scRNASeq" | params$modality == "snRNASeq"){
   fig_width = 12
   fig_height = 10
 }else{
@@ -36,30 +38,38 @@ if(params$modality == "scRNASeq"){
 markers <- read_yaml(params$markers)$cell_types %>% 
   unlist() %>% unique()
 
-if(TRUE %in% grepl("CD16_32", rownames(sce))){
-  rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
-}
-
-random_files <- list.files(params$random_files_path, full.names = TRUE)
+random_files <- list.files(params$random_files_path, full.names = TRUE, pattern = "tsv")
 random <- lapply(random_files, read_tsv) %>%  
   bind_rows() %>% 
   mutate(set = as.character(set))
 head(random)
 
-seurat_files <- list.files(params$seurat_files_path, full.names = TRUE)
+seurat_files <- list.files(params$seurat_files_path, full.names = TRUE, pattern = "tsv")
 Seurat <- lapply(seurat_files, read_tsv) %>%  
   bind_rows() %>% 
   dplyr::rename("set" = "params") %>% 
   mutate(set = as.character(set))
 head(Seurat)
 
-AL_files <- list.files(params$AL_files_path, full.names = TRUE)
-AL <- lapply(AL_files, read_tsv) %>% 
+AL_entropy_files <- list.files(params$AL_entropy_path, full.names = TRUE)
+AL_entropy <- lapply(AL_entropy_files, read_tsv) %>% 
   bind_rows()
 
+AL_maxp_files <- list.files(params$AL_maxp_path, full.names = TRUE)
+AL_maxp <- lapply(AL_maxp_files, read_tsv) %>%
+  bind_rows()
+
+AL <- bind_rows(AL_entropy, AL_maxp)
+```
+
+```{r}
 sce <- readRDS(params$sce)
 dataset <- tibble(cell_id = colnames(sce),
                   gt_cell_type = sce$CellType)
+
+if(any(grepl("CD16_32", rownames(sce)))){
+  rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
+}
 ```
 
 
@@ -74,12 +84,13 @@ random_count %>%
   ggplot(aes(x = reorder(cell_num, as.integer(cell_num)), y = n, fill = cell_type)) +
   geom_bar(stat = 'identity', position = 'fill') +
   labs(x = "Number of cells") + 
-  scale_fill_manual(values = cell_type_colours()) +
+  scale_fill_manual(values = cell_type_colours(params$modality)) +
   whatsthatcell_theme() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
-  facet_grid(set ~ corruption)
+  facet_wrap(~set)
+```
 
-
+```{r fig.width = 10, fig.height = 10}
 Seurat_count <- Seurat %>% 
   group_by(set, cell_type) %>% 
   tally() %>% 
@@ -92,13 +103,13 @@ Seurat_count %>%
   ggplot(aes(x = reorder(num_val, as.integer(num_val)), y = n, fill = cell_type)) +
   geom_bar(stat = 'identity', position = 'fill') +
   labs(x = "Number of cells") + 
-  scale_fill_manual(values = cell_type_colours()) +
+  scale_fill_manual(values = cell_type_colours(params$modality)) +
   whatsthatcell_theme() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
-  facet_grid(corruption ~ knn_val + res_val)
+  facet_grid(knn_val ~ res_val)
+```
 
-
-
+```{r fig.width = 15, fig.height = 12}
 AL_count <- AL %>% 
   group_by(method, cell_type, cell_num) %>% 
   tally() %>% 
@@ -106,12 +117,26 @@ AL_count <- AL %>%
 
 AL_count %>% 
   mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 
-  separate(method, into = c('strategy', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
-  select(-c(r, c)) %>% 
+  separate(method, into = c('strategy', 'al', 'AL_alg', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
+  select(-c(al, r, c)) %>% 
+  filter(AL_alg == "rf") |>
   ggplot(aes(x = reorder(cell_num, as.integer(cell_num)), y = n, fill = cell_type)) +
   geom_bar(stat = 'identity', position = 'fill') +
-  scale_fill_manual(values = cell_type_colours()) +
-  labs(x = "Number of cells") + 
+  scale_fill_manual(values = cell_type_colours(params$modality)) +
+  labs(x = "Number of cells", title = "RF") + 
+  facet_grid(strategy ~ random + corrupted) +
+  whatsthatcell_theme() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+AL_count %>% 
+  mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 
+  separate(method, into = c('strategy', 'al', 'AL_alg', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
+  select(-c(al, r, c)) %>% 
+  filter(AL_alg == "multinom") |>
+  ggplot(aes(x = reorder(cell_num, as.integer(cell_num)), y = n, fill = cell_type)) +
+  geom_bar(stat = 'identity', position = 'fill') +
+  scale_fill_manual(values = cell_type_colours(params$modality)) +
+  labs(x = "Number of cells", title = "LR") + 
   facet_grid(strategy ~ random + corrupted) +
   whatsthatcell_theme() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
@@ -125,7 +150,7 @@ dataset_frequencies %>%
   ggplot(aes(x = set, y = n, fill = gt_cell_type)) +
   geom_bar(stat = 'identity', position = 'fill') +
   labs(title = "Cell type proportions in overall dataset") +
-  scale_fill_manual(values = cell_type_colours()) +
+  scale_fill_manual(values = cell_type_colours(params$modality)) +
   whatsthatcell_theme()
 ```
 
@@ -133,8 +158,9 @@ dataset_frequencies %>%
 # Heatmaps
 
 ## AL selection 
-
+### First RF
 ```{r fig.width= fig_width, fig.height=fig_height}
+save.image("debug-cell-select.Rdata")
 if(any(grepl("CellType", colnames(colData(sce))))){
   cell_type_column <- "CellType"
 }else{
@@ -142,33 +168,55 @@ if(any(grepl("CellType", colnames(colData(sce))))){
 }
 
 
-expression_heatmap <- function(sce, df, selection_method, params){
+expression_heatmap <- function(sce, df, selection_method, params, modality){
   sub_sce <- sce[markers, colnames(sce) %in% df$cell_id]
   createHeatmap(sub_sce, 
               cell_type_column = cell_type_column, 
-              title = paste(selection_method, '\n', params))
+              title = paste(selection_method, '\n', params), modality = modality)
   
 }
 
 AL <- AL %>% 
   mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 
-  separate(method, into = c('strategy', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
-  select(-c(r, c))
+  separate(method, into = c('strategy', 'al', 'AL_alg', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
+  select(-c(al, r, c))
 
-lapply(unique(AL$strategy), function(strat){
-  lapply(unique(AL$random), function(rand){
-    lapply(unique(AL$corrupted), function(corrupted){
-      lapply(unique(AL$cell_num), function(cell_num){
-        df <- filter(AL, 
+RF <- filter(AL, AL_alg == "rf")
+
+lapply(unique(RF$strategy), function(strat){
+  lapply(unique(RF$random), function(rand){
+    lapply(unique(RF$corrupted), function(corrupted){
+      lapply(unique(RF$cell_num), function(cell_num){
+        df <- filter(RF, 
                      strategy == strat,
                      random == rand,
                      corrupted == corrupted,
                      cell_num == cell_num)
         
-        print(paste0('Strategy-', strat, '-random-', rand, '\ncorrupted-', corrupted, '-cell_num-', cell_num))
+        expression_heatmap(sce, df, 'Active-Learning',
+                           paste0('Strategy-', strat, '-random-', rand, '\ncorrupted-', corrupted, '-cell_num-', cell_num), params$modality)
+      })
+    })
+  })
+})
+```
+
+### Next LR
+```{r}
+LR <- filter(AL, AL_alg == "multinom")
+
+lapply(unique(LR$strategy), function(strat){
+  lapply(unique(LR$random), function(rand){
+    lapply(unique(LR$corrupted), function(corrupted){
+      lapply(unique(LR$cell_num), function(cell_num){
+        df <- filter(LR, 
+                     strategy == strat,
+                     random == rand,
+                     corrupted == corrupted,
+                     cell_num == cell_num)
         
         expression_heatmap(sce, df, 'Active-Learning',
-                           paste0('Strategy-', strat, '-random-', rand, '\ncorrupted-', corrupted, '-cell_num-', cell_num))
+                           paste0('Strategy-', strat, '-random-', rand, '\ncorrupted-', corrupted, '-cell_num-', cell_num), params$modality)
       })
     })
   })
@@ -179,27 +227,25 @@ lapply(unique(AL$strategy), function(strat){
 ## Random selection 
 
 ```{r fig.width=fig_width, fig.height=fig_height}
-random <- random %>% 
-  separate(params, into = c("num", "cell_num", 'cor', 'corruption'), sep = '-')
+  random <- random %>% 
+    separate(params, into = c("num", "cell_num", 'cor', 'corruption'), sep = '-')
 
-lapply(unique(random$set), function(set){
-  lapply(unique(random$corruption), function(corrupt){
-    lapply(unique(random$cell_num), function(cell_num){
-        df <- filter(random, 
-                     set == set,
-                     corruption == corrupt,
-                     cell_num == cell_num)
-        
-        print(paste0(set, '-corrupted-', corrupt, '-cell_num-', cell_num))
-        
-        expression_heatmap(sce, df, 'Random',
-                           paste0(set, '-corrupted-', corrupt, '-cell_num-', cell_num))
+  lapply(unique(random$set), function(set){
+    lapply(unique(random$corruption), function(corrupt){
+      lapply(unique(random$cell_num), function(cell_num){
+          df <- filter(random, 
+                      set == set,
+                      corruption == corrupt,
+                      cell_num == cell_num)
+          
+          expression_heatmap(sce, df, 'Random',
+                            paste0(set, '-corrupted-', corrupt, '-cell_num-', cell_num), params$modality)
+      })
     })
   })
-})
 
 filter(random, set == "Set1", corruption == "0", cell_num == "100") %>% 
-  expression_heatmap(sce, ., "test1", 'test2')
+  expression_heatmap(sce, ., "test1", 'test2', params$modality)
 ```
 
 
@@ -223,7 +269,7 @@ lapply(unique(Seurat$knn_val), function(nearest_n){
        paste0('knn-', nearest_n, '-res-', knn_resolution, '-corrupted-', corrupt, '-cell_num-', num_cell)
        
         expression_heatmap(sce, df, 'Seurat',
-                          paste0('knn-', nearest_n, '-res-', knn_resolution, '\ncorrupted-', corrupt, '-cell_num-', num_cell))
+                          paste0('knn-', nearest_n, '-res-', knn_resolution, '\ncorrupted-', corrupt, '-cell_num-', num_cell), params$modality)
       })
     })
   })

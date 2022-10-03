@@ -174,7 +174,7 @@ remove_marker_AL <- function(markers, remove_index, df_expression, ground_truth)
   
   for(i in 1:iterations){
     # Get initial set of cells based on their marker expression ranking
-    df_expression <- cell_ranking_wrapper(df_expression, markers)
+    df_expression <- cell_ranking_wrapper(df_expression, markers, random_selection = 0)
 
     if(all(all_cell_types %in% unique(df_expression$cell_type))){
       break

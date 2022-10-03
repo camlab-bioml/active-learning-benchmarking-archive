@@ -2,7 +2,8 @@
 title: "Visualize corruption"
 output: html_document
 params:
-  AL_files_path: "../../data/CyTOF/Active-Learning/AL-batches-subset"
+  AL_entropy_path: "../../data/CyTOF/Active-Learning/AL-batches-subset"
+  AL_maxp_path: ""
   sce: "../../data/CyTOF/CyTOF-train.rds"
   modality: ""
 ---
@@ -23,33 +24,69 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 
 ```{r message = FALSE}
-AL_files <- list.files(params$AL_files_path, full.names = TRUE, pattern = "tsv")
-AL <- lapply(AL_files, read_tsv) %>% 
+AL_files_entropy <- list.files(params$AL_entropy_path, full.names = TRUE, pattern = "tsv")
+AL_entropy <- lapply(AL_files_entropy, read_tsv) %>% 
   bind_rows() %>% 
   mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 
-  separate(method, into = c('strategy', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
-  select(-c(r, c))
-head(AL)
+  separate(method, into = c('strategy', 'al', 'AL_alg', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
+  select(-c(al, r, c))
+
+AL_files_maxp <- list.files(params$AL_maxp_path, full.names = TRUE, pattern = "tsv")
+AL_maxp <- lapply(AL_files_maxp, read_tsv) %>% 
+  bind_rows() %>% 
+  mutate(method = gsub("Active-Learning-groundTruth-strategy-", "", method)) %>% 
+  separate(method, into = c('strategy', 'al', 'AL_alg', 'r', 'random', 'c', 'corrupted'), sep = '-') %>% 
+  select(-c(al, r, c))
 ```
 
-
+## Entropy
+### RF
 ```{r fig.width=13, fig.height=20}
-AL_alluvial <- function(AL, cells){
+save.image('debug-corruption.Rdata')
+AL_alluvial <- function(AL, modality){
   AL %>% 
     pivot_longer(c(cell_type, corrupted_cell_type), names_to = "gt_or_mutated", values_to = "cell_type") %>% 
-    filter(cell_num == cells) %>% 
     ggplot(aes(x = gt_or_mutated, stratum = cell_type, fill = cell_type, alluvium = cell_id)) +
     geom_stratum() +
     geom_flow() +
-    scale_fill_manual(values = cell_type_colours()) +
+    scale_fill_manual(values = cell_type_colours(modality)) +
     whatsthatcell_theme() +
     facet_grid(random + strategy ~ corrupted, scales = "free_y") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 }
 
-lapply(unique(AL$cell_num), function(x){
-  AL_alluvial(AL, x)
+lapply(unique(AL_entropy$cell_num), function(x){
+  df <- AL_entropy %>% 
+    filter(AL_alg == 'rf', cell_num == x)
+  AL_alluvial(df, params$modality)
 })
+```
 
+### LR
+```{r fig.width=13, fig.height=20}
+lapply(unique(AL_entropy$cell_num), function(x){
+  df <- AL_entropy %>% 
+    filter(AL_alg == 'multinom', cell_num == x)
+  AL_alluvial(df, params$modality)
+})
+```
+
+## Maxp
+### RF
+```{r fig.width=13, fig.height=20}
+lapply(unique(AL_maxp$cell_num), function(x){
+  df <- AL_maxp %>% 
+    filter(AL_alg == 'rf', cell_num == x)
+  AL_alluvial(df, params$modality)
+})
+```
+
+### LR
+```{r fig.width=13, fig.height=20}
+lapply(unique(AL_maxp$cell_num), function(x){
+  df <- AL_maxp %>% 
+    filter(AL_alg == 'multinom', cell_num == x)
+  AL_alluvial(df, params$modality)
+})
 ```
 

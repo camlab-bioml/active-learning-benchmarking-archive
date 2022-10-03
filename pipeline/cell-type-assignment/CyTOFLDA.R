@@ -41,16 +41,30 @@ predictions <- CyTOF_LDApredict(LDA.Model, TestingSamplesExt = annotate_dir,
 
 predictions <- unlist(predictions)
 
-df_output <- tibble(
-  cell_id = rownames(data_annotate),
-  predicted_cell_type = predictions,
-  prediction_params = paste0("CyTOF-LDA-iterations_set-", snakemake@wildcards[['set']], "-knn-", 
-                             snakemake@wildcards[['neighbors']], "-res-", snakemake@wildcards[['res']], '-cell_numbers-', snakemake@wildcards[['cell_num']],
-                             '-randomSelection-', snakemake@wildcards[['rand']], '-corrupted-', snakemake@wildcards[['corrupt']]),
-  selection_procedure = paste0(snakemake@wildcards[['selection_procedure']], '-strategy-', snakemake@wildcards[['strat']]),
-  training_annotator = snakemake@wildcards[['annotator']],
-  modality = 'CyTOF'
-)
+if(is.null(snakemake@wildcards[['similarity']])){
+  df_output <- tibble(
+    cell_id = rownames(data_annotate),
+    predicted_cell_type = predictions,
+    prediction_params = paste0("CyTOF-LDA-knn-", snakemake@wildcards[['neighbors']], "-res-", snakemake@wildcards[['res']], 
+                              '-cell_numbers-', snakemake@wildcards[['cell_num']], '-randomSelection-', snakemake@wildcards[['rand']], 
+                              '-corrupted-', snakemake@wildcards[['corrupt']], '-Init-', snakemake@wildcards[['initial']], '-seed-', snakemake@wildcards[['s']]),
+    selection_procedure = paste0(snakemake@wildcards[['selection_procedure']], '-strategy-', snakemake@wildcards[['strat']], '-ALAlg-', snakemake@wildcards[['AL_alg']]),
+    training_annotator = snakemake@wildcards[['annotator']],
+    modality = 'CyTOF'
+  )
+}else{
+  df_output <- tibble(
+    cell_id = rownames(data_annotate),
+    predicted_cell_type = predictions,
+    prediction_params = paste0("CyTOF-LDA-knn-", snakemake@wildcards[['neighbors']], "-res-", snakemake@wildcards[['res']], 
+                              '-cell_numbers-', snakemake@wildcards[['cell_num']], '-randomSelection-', snakemake@wildcards[['rand']], 
+                              '-corrupted-', snakemake@wildcards[['corrupt']], '-Init-', snakemake@wildcards[['initial']], '-seed-', snakemake@wildcards[['s']]),
+    selection_procedure = paste0(snakemake@wildcards[['selection_procedure']], '-strategy-', snakemake@wildcards[['strat']], '-ALAlg-', snakemake@wildcards[['AL_alg']]),
+    similarity = paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']]),
+    training_annotator = snakemake@wildcards[['annotator']],
+    modality = 'CyTOF'
+  )
+}
 
 if(is.null(snakemake@wildcards[['cell_selection']])){
   df_output$cell_selection <- NA

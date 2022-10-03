@@ -78,6 +78,9 @@ for(i in 1:max_AL_iterations){
                                 entropies, 
                                 as.numeric(snakemake@wildcards[['rand']]),
                                 criterion)
+  if(length(AL$new_cells) != 10){
+    stop("Error: Active learning did not select the right number of cells") # this is to prevent issues with quantile selection (when quantiles are equal to max no cells were selected)
+  }
 
   entropies[[length(entropies) + 1]] <- AL$criterion_table
   

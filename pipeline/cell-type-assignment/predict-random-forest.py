@@ -16,14 +16,16 @@ predicted = model.predict(expression)
 
 output = pd.DataFrame({'cell_id': cell_ids,
                        'predicted_cell_type': predicted,
-                       'prediction_params': 'Random-Forest-iterations_set-' + snakemake.wildcards['set'] + '-knn-' + snakemake.wildcards['neighbors'] + '-res-' + snakemake.wildcards['res'] + '-cell_numbers-' + snakemake.wildcards['cell_num'] + '-randomSelection-' + snakemake.wildcards['rand'] + '-corrupted-' + snakemake.wildcards['corrupt'],
-                       'selection_procedure': snakemake.wildcards['selection_procedure'] + '-strategy-' + snakemake.wildcards['strat'],
-                       'training_annotator': snakemake.wildcards['annotator'],
-                       'modality': snakemake.params['modality']})
+                       'prediction_params': 'Random-Forest-knn-' + snakemake.wildcards['neighbors'] + '-res-' + snakemake.wildcards['res'] + '-cell_numbers-' + snakemake.wildcards['cell_num'] + '-randomSelection-' + snakemake.wildcards['rand'] + '-corrupted-' + snakemake.wildcards['corrupt'] + '-Init-' + snakemake.wildcards['initial'] + '-seed-' + snakemake.wildcards['s'],
+                       'selection_procedure': snakemake.wildcards['selection_procedure'] + '-strategy-' + snakemake.wildcards['strat'] + '-ALAlg-' + snakemake.wildcards['AL_alg'],
+                       'modality': snakemake.wildcards['modality']})
 
 if 'cell_selection' in dict(snakemake.wildcards).keys():
     output['cell_selection'] = snakemake.wildcards['cell_selection']
 else:
     output['cell_selection'] = 'NA'
+
+if 'similarity' in dict(snakemake.wildcards).keys():
+    output['similarity'] = snakemake.wildcards['bal'] + '-' + snakemake.wildcards['similarity']
 
 output.to_csv(snakemake.output['predictions'], sep = '\t', index = False)

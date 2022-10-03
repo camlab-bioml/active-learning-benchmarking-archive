@@ -101,7 +101,7 @@ select_entropy <- function(entropy_df, method, amount, random_selection){
   if(grepl("_quant_entropy", method)){
     ordered_cells <- select(entropy_df, X1, entropy) %>% 
       arrange(entropy) %>% 
-      filter(entropy > quantile)
+      filter(entropy >= quantile)
     
     if(nrow(ordered_cells) > amount){
       cells <- ordered_cells$X1[1:select_amount]
@@ -136,7 +136,6 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
     cells <- maxp_df[order(maxp_df$maxp, decreasing = F),][1:select_amount, ]$X1
   }
   
-  
   # Find appropriate quantile threshold
   else if(method == "0.05_quant_maxp"){
     quantile <- quantile(maxp_df$maxp, 0.05)
@@ -148,8 +147,8 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
   if(grepl("_quant_maxp", method)){
     ordered_cells <- select(maxp_df, X1, maxp) %>%
       arrange(maxp) %>%
-      filter(maxp > quantile)
-    
+      filter(maxp >= quantile)
+
     if(nrow(ordered_cells) > amount){
       cells <- ordered_cells$X1[1:select_amount]
     }else{
@@ -303,11 +302,11 @@ create_features <- function(sce_path){
   df_expression$gt_cell_type <- sce$CellType
   
   # Remove genes with 0 expression
-  df_expression <- df_expression[, c(TRUE, 
+  expression <- df_expression[, c(TRUE, 
                                      colSums(df_expression[,2:(ncol(df_expression)-3)]) > 0,
                                      rep(TRUE, 3))]
   
-  df_PCA <- select(df_expression, -c(X1, cell_type, iteration, gt_cell_type)) |> 
+  df_PCA <- select(expression, -c(X1, cell_type, iteration, gt_cell_type)) |> 
     as.matrix() |> 
     prcomp(center = TRUE, scale. = TRUE)
   

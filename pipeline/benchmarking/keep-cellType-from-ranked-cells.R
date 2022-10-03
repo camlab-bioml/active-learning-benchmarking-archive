@@ -39,7 +39,7 @@ remove_marker_AL <- function(markers, df_expression, ground_truth){
   }
   
   for(i in 1:20){
-    AL <- active_learning_wrapper(df_expression, unique_markers, i)
+    AL <- active_learning_wrapper(df_expression, unique_markers, i, random_selection = 0)
     df_expression <- AL$expression
   }
   

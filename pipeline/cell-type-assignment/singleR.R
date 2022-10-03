@@ -3,6 +3,7 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(caret)
 })
+set.seed(1)
 
 train_sce <- readRDS(snakemake@input[['train_data']])
 assays(train_sce)$counts <- NULL
@@ -24,22 +25,28 @@ pred <- SingleR(annotate_sce, train_sce, labels = train_sce$cell_type)
 
 result <- tibble(cell_id = rownames(pred),
                  predicted_cell_type = pred$labels,
-                 prediction_params = paste0('singleR-labels-iterations_set-', 
-                                            snakemake@wildcards[['set']],
-                                            "-knn-", snakemake@wildcards[['neighbors']],
+                 prediction_params = paste0("singleR-labels-knn-", snakemake@wildcards[['neighbors']],
                                             "-res-", snakemake@wildcards[['res']], 
                                             "-cell_numbers-", snakemake@wildcards[['cell_num']],
                                             '-randomSelection-', snakemake@wildcards[['rand']], 
-                                            '-corrupted-', snakemake@wildcards[['corrupt']]),
+                                            '-corrupted-', snakemake@wildcards[['corrupt']],
+                                            '-Init-', snakemake@wildcards[['initial']],
+                                            '-seed-', snakemake@wildcards[['s']]),
                  selection_procedure = paste0(snakemake@wildcards[['selection_procedure']],
-                                              '-strategy-', snakemake@wildcards[['strat']]),
+                                              '-strategy-', snakemake@wildcards[['strat']],
+                                              '-ALAlg-', snakemake@wildcards[['AL_alg']]),
                  training_annotator = snakemake@wildcards[['annotator']],
-                 modality = 'scRNASeq')
+                 modality = snakemake@wildcards[['modality']])
 
+# Needed for predictive labeling
 if(is.null(snakemake@wildcards[['cell_selection']])){
   result$cell_selection <- NA
 }else{
   result$cell_selection <- snakemake@wildcards[['cell_selection']]
+}
+
+if(!is.null(snakemake@wildcards[['similarity']])){
+  result$similarity <- paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']])
 }
 
 write_tsv(result, snakemake@output[['predictions']])

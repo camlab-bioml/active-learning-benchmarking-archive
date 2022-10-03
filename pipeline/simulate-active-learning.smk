@@ -33,28 +33,28 @@ active_learner = {
         corrupt = 0,
         s = train_test_seeds),
 
-    'subset_al_entropy_rand_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}-{subset_val}_cells.tsv', 
-        modality = modalities, initial = selection_expansion_dict['Active-Learning_entropy']['initial_sel'], AL_type = ['Active-Learning_entropy'], strat = selection_expansion_dict['Active-Learning_entropy']['strategy'], 
+    'subset_al_entropy_rand_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init_{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-NA-resolution-NA-seed-{s}-{subset_val}_cells.tsv', 
+        modality = modalities, initial = selection_expansion_dict['Active-Learning_entropy']['initial'], AL_type = ['Active-Learning_entropy'], strat = selection_expansion_dict['Active-Learning_entropy']['strategy'], 
         AL_alg = selection_expansion_dict['Active-Learning_entropy']['AL_alg'],
         rand = 0, corrupt = selection_expansion_dict['Active-Learning_entropy']['corruption'], 
         subset_val = cell_numbers, s = train_test_seeds),
 
-    'subset_al_entropy_corr_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}-{subset_val}_cells.tsv', 
-        modality = modalities, initial = selection_expansion_dict['Active-Learning_entropy']['initial_sel'], AL_type = ['Active-Learning_entropy'], strat = selection_expansion_dict['Active-Learning_entropy']['strategy'], 
+    'subset_al_entropy_corr_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init_{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-NA-resolution-NA-seed-{s}-{subset_val}_cells.tsv', 
+        modality = modalities, initial = selection_expansion_dict['Active-Learning_entropy']['initial'], AL_type = ['Active-Learning_entropy'], strat = selection_expansion_dict['Active-Learning_entropy']['strategy'], 
         AL_alg = selection_expansion_dict['Active-Learning_entropy']['AL_alg'],
         rand = selection_expansion_dict['Active-Learning_entropy']['random_selection'], corrupt = 0, 
         subset_val = cell_numbers, s = train_test_seeds),
 
-    'subset_al_maxp_corr_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}-{subset_val}_cells.tsv', 
-        modality = modalities, initial = selection_expansion_dict['Active-Learning_maxp']['initial_sel'], AL_type = ['Active-Learning_maxp'], strat = selection_expansion_dict['Active-Learning_maxp']['strategy'], 
-        AL_alg = selection_expansion_dict['Active-Learning_maxp']['AL_alg'],
-        rand = selection_expansion_dict['Active-Learning_maxp']['random_selection'], corrupt = 0, 
-        subset_val = cell_numbers, s = train_test_seeds),
-    'subset_al_maxp_rand_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}-{subset_val}_cells.tsv', 
-        modality = modalities, initial = selection_expansion_dict['Active-Learning_maxp']['initial_sel'], AL_type = ['Active-Learning_maxp'], strat = selection_expansion_dict['Active-Learning_maxp']['strategy'], 
-        AL_alg = selection_expansion_dict['Active-Learning_maxp']['AL_alg'],
-        rand = 0, corrupt = selection_expansion_dict['Active-Learning_maxp']['corruption'], 
-        subset_val = cell_numbers, s = train_test_seeds),
+    # 'subset_al_maxp_corr_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-NA-resolution-NA-seed-{s}-{subset_val}_cells.tsv', 
+    #     modality = modalities, initial = selection_expansion_dict['Active-Learning_maxp']['initial_sel'], AL_type = ['Active-Learning_maxp'], strat = selection_expansion_dict['Active-Learning_maxp']['strategy'], 
+    #     AL_alg = selection_expansion_dict['Active-Learning_maxp']['AL_alg'],
+    #     rand = selection_expansion_dict['Active-Learning_maxp']['random_selection'], corrupt = 0, 
+    #     subset_val = cell_numbers, s = train_test_seeds),
+    # 'subset_al_maxp_rand_0': expand(output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-NA-resolution-NA-seed-{s}-{subset_val}_cells.tsv', 
+    #     modality = modalities, initial = selection_expansion_dict['Active-Learning_maxp']['initial_sel'], AL_type = ['Active-Learning_maxp'], strat = selection_expansion_dict['Active-Learning_maxp']['strategy'], 
+    #     AL_alg = selection_expansion_dict['Active-Learning_maxp']['AL_alg'],
+    #     rand = 0, corrupt = selection_expansion_dict['Active-Learning_maxp']['corruption'], 
+    #     subset_val = cell_numbers, s = train_test_seeds),
     #'removed_marker_AL': expand(output + 'AL_with_removed_input/scRNASeq-marker-{removed}-seed-{seed}.tsv', removed = ['removed', 'kept'], seed = list(range(10)))
 }
 
@@ -65,12 +65,24 @@ rule Create_active_learning_ground_truth:
         expression = 'data/{modality}/{modality}-train-seed-{s}.rds'
     params:
         max_cell_num = max(cell_numbers)
+    priority: 10
     output:
         assignments = output + 'data/{modality}/{AL_type}/Init-{initial}-strat-{strat}-al-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}.tsv',
         entropy = output + 'data/{modality}/uncertainties/{AL_type}/Init-{initial}-strat-{strat}-al-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}.tsv'
     script:
         'cell-type-assignment/simulate-active-learner.R'
 
+selection_expansion_dict2 = {
+    'Active-Learning_maxp': {
+       'initial': initial_selections,
+       'neighbors': ['NA'],
+               'res': ['NA'],
+               'strategy': ['0.05_quant_maxp', '0.25_quant_maxp', 'lowest_maxp'],
+               'initial_sel': initial_selections,
+               'AL_alg': AL_methods,
+               'random_selection': random_percentages,
+               'corruption': corruption_percentages}
+}
 
 def get_entropy_files(AL_type):
     if AL_type == "Active-Learning_entropy":
@@ -78,7 +90,7 @@ def get_entropy_files(AL_type):
             strat = selection_expansion_dict['Active-Learning_entropy']['strategy'])
     elif AL_type == 'Active-Learning_maxp':
         f = expand(output + 'data/{{modality}}/uncertainties/Active-Learning_maxp/Init-{{initial}}-strat-{strat}-al-{{AL_alg}}-rand_sel-{{rand}}-corr-{{corrupt}}-seed-{{s}}.tsv',
-            strat = selection_expansion_dict['Active-Learning_maxp']['strategy'])
+            strat = selection_expansion_dict2['Active-Learning_maxp']['strategy'])
     return f
 
 ## CHECKED
@@ -106,7 +118,8 @@ rule create_AL_training_batches:
     input:
         assignment = output + 'data/{modality}/{AL_type}/Init-{initial}-strat-{strat}-al-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}.tsv'
     output:
-        split = output + 'data/{modality}/{AL_type}/AL-batches-subset/Init-{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}-{subset_val}_cells.tsv'
+        split = output + 'data/{modality}/{AL_type}/AL-batches-subset/Init_{initial}-strat-{strat}-ALAlg-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-knn_neighbors-NA-resolution-NA-seed-{s}-{subset_val}_cells.tsv'
+    resources: smallfile=1
     script:
         'cell-type-assignment/subset-simulated-active-learner-n-cells.R'
 

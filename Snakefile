@@ -12,7 +12,7 @@ selection_procedures = ['random', 'Seurat-clustering', 'Ranked-Active-Learning_e
 evaluation_methods_dict = {
     'scRNASeq': ['scmap-cluster', 'scmap-sc', 'singleR', 'Random-Forest'], 
     'CyTOF': ['CyTOF-LDA', 'Random-Forest'],
-    'snRNASeq': ['singleR', 'Random-Forest']
+    'snRNASeq': ['scmap-cluster', 'scmap-sc', 'singleR', 'Random-Forest']
     }
 evaluation_methods = list(chain.from_iterable(list(evaluation_methods_dict.values())))
 train_test_seeds = list(range(10))
@@ -83,10 +83,10 @@ include: 'pipeline/rem-cell-type.smk'
 
 rule all:
     input:
-        process_data_output.values(),
+        #process_data_output.values(),
         #cell_type_predictions.values(),
-        active_learner.values(),
-        #viz.values(),
+        #active_learner.values(),
+        viz.values(),
         #pred_lab.values(),
         #imbalance.values(),
         #rem_cell_type.values()

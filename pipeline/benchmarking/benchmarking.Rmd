@@ -3,6 +3,7 @@ title: "Benchmarking"
 output: html_document
 params:
   acc: ""
+  al_alg: ""
 ---
 
 ```{r setup, include=FALSE}
@@ -18,21 +19,22 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 ```{r message=F}
 ### [ LOAD GROUND TRUTH ] #####
-acc <- read_tsv(params$acc)
+acc <- read_tsv(params$acc) |>
+  filter(AL_alg == params$al_alg | is.na(AL_alg) | AL_alg == "NA")
 ```
 
 
 ```{r fig.width=12}
 selection_order <- acc %>% 
-  filter(rand == "0" | rand == "NA") %>% 
+  filter(rand == "0" | rand == "NA" | is.na(rand)) %>% 
   filter(corrupted == "0") %>% 
   group_by(selection_procedure) %>% 
-  summarise(mean_accuracy = mean(.estimate)) %>% 
+  summarise(mean_accuracy = mean(na.omit(.estimate))) %>% 
   arrange(mean_accuracy) %>% 
   pull(selection_procedure)
 
 acc %>% 
-  filter(rand == "0" | rand == "NA") %>% 
+  filter(rand == "0" | rand == "NA" | is.na(rand)) %>% 
   filter(corrupted == "0") %>% 
   mutate(selection_procedure = factor(selection_procedure, levels = selection_order)) %>% 
   ggplot(aes(x = selection_procedure, y = .estimate, color = method)) +
@@ -46,11 +48,12 @@ acc %>%
 
 ```{r}
 acc %>% 
-  filter(rand == "0" | rand == "NA") %>% 
+  filter(rand == "0" | rand == "NA" | is.na(rand)) %>% 
   filter(corrupted == "0") %>% 
-  mutate(selection_procedure = factor(selection_procedure, levels = selection_order),
-         plotting_group = paste0(set, "-", knn, "-", res, "-", selection_procedure)) %>% 
-  ggplot(aes(x = cell_num, y = .estimate, color = selection_procedure, group = plotting_group)) +
+  mutate(selection_procedure = factor(selection_procedure, levels = selection_order)) |>
+  group_by(cell_num, selection_procedure, method, .metric) |> 
+  summarise(mean_estimate = mean(na.omit(.estimate))) |> 
+  ggplot(aes(x = cell_num, y = mean_estimate, color = selection_procedure)) +
   geom_point() +
   ylim(0, 1) +
   geom_line() +
@@ -64,7 +67,7 @@ lapply(unique(acc$method), function(x){
   acc %>% 
     filter(rand == "0") %>% 
     filter(method == x) %>% 
-    ggplot(aes(x = corrupted, y = .estimate, color = selection_procedure, group = selection_procedure)) + 
+    ggplot(aes(x = as.character(corrupted), y = .estimate, color = selection_procedure, group = selection_procedure)) + 
     geom_point() +
     geom_line() +
     ylim(0, 1) +

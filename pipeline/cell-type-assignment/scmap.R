@@ -5,6 +5,8 @@ suppressPackageStartupMessages({
   library(caret)
 })
 
+set.seed(1)
+
 # Read in training data expression
 train_sce <- readRDS(snakemake@input[['train_data']])
 
@@ -42,17 +44,17 @@ scmapCluster_results <- scmapCluster(
 
 clustering_prediction <- tibble(cell_id = colnames(annotate_sce),
                                 predicted_cell_type = scmapCluster_results$combined_labs,
-                                prediction_params = paste0('scmap-clusters-iterations_set-', 
-                                                           snakemake@wildcards[['set']],
-                                                           "-knn-", snakemake@wildcards[['neighbors']],
+                                prediction_params = paste0("scmap-clusters-knn-", snakemake@wildcards[['neighbors']],
                                                            "-res-", snakemake@wildcards[['res']], 
                                                            "-cell_numbers-", snakemake@wildcards[['cell_num']],
                                                            '-randomSelection-', snakemake@wildcards[['rand']], 
-                                                           '-corrupted-', snakemake@wildcards[['corrupt']]),
+                                                           '-corrupted-', snakemake@wildcards[['corrupt']],
+                                                           '-Init-', snakemake@wildcards[['initial']],
+                                                           '-seed-', snakemake@wildcards[['s']]),
                                 selection_procedure = paste0(snakemake@wildcards[['selection_procedure']],
-                                                             '-strategy-', snakemake@wildcards[['strat']]),
-                                training_annotator = snakemake@wildcards[['annotator']],
-                                modality = 'scRNASeq')
+                                                             '-strategy-', snakemake@wildcards[['strat']],
+                                                             '-ALAlg-', snakemake@wildcards[['AL_alg']]),
+                                modality = snakemake@wildcards[['modality']])
 
 if(is.null(snakemake@wildcards[['cell_selection']])){
   clustering_prediction$cell_selection <- NA
@@ -60,12 +62,14 @@ if(is.null(snakemake@wildcards[['cell_selection']])){
   clustering_prediction$cell_selection <- snakemake@wildcards[['cell_selection']]
 }
 
+if(!is.null(snakemake@wildcards[['similarity']])){
+  clustering_prediction$similarity <- paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']])
+}
+
 
 write_tsv(clustering_prediction, snakemake@output[['cluster_predictions']])
 
 ### Cell level
-set.seed(1)
-
 train_sce <- indexCell(train_sce)
 
 scmapCell_results <- scmapCell(
@@ -84,22 +88,27 @@ scmapCell_clusters <- scmapCell2Cluster(
 
 sc_prediction <- tibble(cell_id = colnames(annotate_sce),
                         predicted_cell_type = scmapCell_clusters$scmap_cluster_labs[,1],
-                        prediction_params = paste0('scmap-sc-iterations_set-',
-                                                   snakemake@wildcards[['set']],
-                                                   "-knn-", snakemake@wildcards[['neighbors']],
+                        prediction_params = paste0("scmap-sc-knn-", snakemake@wildcards[['neighbors']],
                                                    "-res-", snakemake@wildcards[['res']],
                                                    "-cell_numbers-", snakemake@wildcards[['cell_num']],
                                                    '-randomSelection-', snakemake@wildcards[['rand']], 
-                                                   '-corrupted-', snakemake@wildcards[['corrupt']]),
+                                                   '-corrupted-', snakemake@wildcards[['corrupt']],
+                                                   '-Init-', snakemake@wildcards[['initial']],
+                                                   '-seed-', snakemake@wildcards[['s']]),
                         selection_procedure = paste0(snakemake@wildcards[['selection_procedure']],
-                                                     '-strategy-', snakemake@wildcards[['strat']]),
+                                                     '-strategy-', snakemake@wildcards[['strat']],
+                                                     '-ALAlg-', snakemake@wildcards[['AL_alg']]),
                         training_annotator = snakemake@wildcards[['annotator']],
-                        modality = 'scRNASeq')
+                        modality = snakemake@wildcards[['modality']])
 
 if(is.null(snakemake@wildcards[['cell_selection']])){
   sc_prediction$cell_selection <- NA
 }else{
   sc_prediction$cell_selection <- snakemake@wildcards[['cell_selection']]
+}
+
+if(!is.null(snakemake@wildcards[['similarity']])){
+  sc_prediction$similarity <- paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']])
 }
 
 write_tsv(sc_prediction, snakemake@output[['sc_predictions']])

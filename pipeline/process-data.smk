@@ -7,14 +7,14 @@ process_data_output = {
     'dataset_dimensionality': expand(output + 'reports/{modality}-dataset-dimensionality-seed-{s}.html', modality = modalities, s = train_test_seeds),
 
     # Random subsets
-    'sce_subset1': expand(output + 'data/{modality}/random/random-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-{cell_num}_cells-seed-{s}.rds', modality = modalities, corrupt = [0], cell_num = cell_numbers, set = random_sets, s = train_test_seeds),
-    'gt_subset1': expand(output + 'data/{modality}/random/random-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations-{cell_num}_cells-seed-{s}.tsv', modality = modalities, corrupt = [0], cell_num = cell_numbers, s = train_test_seeds),
+    'sce_subset1': expand(output + 'data/{modality}/random/random-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.rds', modality = modalities, cell_num = cell_numbers, s = train_test_seeds),
+    'gt_subset1': expand(output + 'data/{modality}/random/random-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.tsv', modality = modalities, cell_num = cell_numbers, s = train_test_seeds),
     
     # Seurat clustering subsets
-    'seu_sce': expand(output + 'data/{modality}/Seurat-clustering/Seurat-clustering-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-knn_neighbors-{neighbors}-resolution-{res}-{cell_num}_cells-seed-{s}.rds', 
-        modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution, corrupt = [0], cell_num = cell_numbers, s = train_test_seeds),
-    'gt_seu': expand(output + 'data/{modality}/Seurat-clustering/Seurat-clustering-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-annotator-GroundTruth-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-NA-{cell_num}_cells-seed-{s}.tsv', 
-        modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution, corrupt = [0], cell_num = cell_numbers, s = train_test_seeds),
+    'seu_sce': expand(output + 'data/{modality}/Seurat-clustering/Seurat-clustering-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.rds', 
+        modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution, cell_num = cell_numbers, s = train_test_seeds),
+    'gt_seu': expand(output + 'data/{modality}/Seurat-clustering/Seurat-clustering-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.tsv', 
+        modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution, cell_num = cell_numbers, s = train_test_seeds),
 }
 
 rule split_datasets:
@@ -59,8 +59,8 @@ rule create_random_subsets:
     input:
         sce = 'data/{modality}/{modality}-train-seed-{s}.rds'
     output:
-        sce_subset1 = output + 'data/{modality}/random/random-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-{cell_num}_cells-seed-{s}.rds',
-        gt_subset1 = output + 'data/{modality}/random/random-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-annotator-GroundTruth-knn_neighbors-NA-resolution-NA-iterations-{cell_num}_cells-seed-{s}.tsv',
+        sce_subset1 = output + 'data/{modality}/random/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.rds',
+        gt_subset1 = output + 'data/{modality}/random/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.tsv',
     script:
         'process-data/select-random-subset.R'
 
@@ -69,7 +69,7 @@ rule create_clustering_subsets:
         seurat = output + 'cluster-and-interpret/{modality}/{modality}-Seurat-assignments-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}.tsv',
         sce = 'data/{modality}/{modality}-train-seed-{s}.rds'
     output:
-        ground_truth = output + 'data/{modality}/Seurat-clustering/Seurat-clustering-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-annotator-GroundTruth-knn_neighbors-{neighbors}-resolution-{res}-iterations_set-NA-{cell_num}_cells-seed-{s}.tsv',
-        sce = output + 'data/{modality}/Seurat-clustering/Seurat-clustering-NA-ALAlg-NA-rand_sel-NA-corr-{corrupt}-{modality}-knn_neighbors-{neighbors}-resolution-{res}-{cell_num}_cells-seed-{s}.rds'
+        ground_truth = output + 'data/{modality}/Seurat-clustering/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.tsv',
+        sce = output + 'data/{modality}/Seurat-clustering/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.rds'
     script:
         'process-data/select-cluster-subset.R'

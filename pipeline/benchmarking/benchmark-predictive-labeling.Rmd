@@ -31,7 +31,7 @@ lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
     filter(method == x) |>
     group_by(cell_selection) |> 
-    summarize(mean_score = mean(.estimate)) |> 
+    summarise(mean_score = mean(na.omit(.estimate))) |> 
     arrange(mean_score) |> 
     pull(cell_selection)
   acc |> 
@@ -55,7 +55,7 @@ lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
     filter(method == x) |>
     group_by(cell_selection) |> 
-    summarize(mean_score = mean(.estimate)) |> 
+    summarise(mean_score = mean(na.omit(.estimate))) |> 
     arrange(mean_score) |> 
     pull(cell_selection)
   acc |> 
@@ -72,13 +72,13 @@ lapply(unique(acc$method), function(x){
 })
 ```
 
-
-```{r fig.width=7, fig.height=4}
+This distribution is now only over 99, baseline, entropy and maxp selection procedures
+```{r fig.width=12, fig.height=4}
 lapply(unique(acc$method), function(x){
   sample_order <- acc |> 
     filter(method == x) |>
     group_by(selection_procedure) |> 
-    summarize(mean_score = mean(.estimate)) |> 
+    summarise(mean_score = mean(na.omit(.estimate))) |> 
     arrange(mean_score) |> 
     pull(selection_procedure)
   acc |> 
@@ -88,7 +88,7 @@ lapply(unique(acc$method), function(x){
     geom_boxplot() +
     #geom_jitter(width = 0.05) +
     ylim(0, 1) +
-    labs(x = "High confidence cell selection", title = x, color = "Cell number") +
+    labs(x = "Cell selection procedure", title = x, color = "Cell number") +
     facet_grid( ~ .metric) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
@@ -96,4 +96,25 @@ lapply(unique(acc$method), function(x){
 ```
 
 
+```{r fig.width=8, fig.height=9}
+lapply(unique(acc$method), function(x){
+  sample_order <- acc |> 
+    filter(method == x) |>
+    group_by(selection_procedure) |> 
+    summarise(mean_score = mean(na.omit(.estimate))) |> 
+    arrange(mean_score) |> 
+    pull(selection_procedure)
+  acc |> 
+    filter(method == x) |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = sample_order)) |> 
+    ggplot(aes(x = selection_procedure, y = .estimate)) +
+    geom_boxplot() +
+    #geom_jitter(width = 0.05) +
+    ylim(0, 1) +
+    labs(x = "Cell selection procedure", title = x) +
+    facet_grid(cell_num ~ .metric) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+})
+```
 

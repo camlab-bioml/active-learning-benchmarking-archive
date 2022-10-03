@@ -11,7 +11,7 @@ unique_markers <- unlist(markers) %>% unique()
 
 
 ### [PROCESS DATA] ###
-if(snakemake@params[['mod']] == 'scRNASeq'){
+if(snakemake@params[['mod']] == 'scRNASeq' | snakemake@params[['mod']] == 'snRNASeq'){
   # Normalize scRNASeq data
   seu <- CreateSeuratObject(counts = assays(sce)$counts)
   seu <- NormalizeData(seu)
