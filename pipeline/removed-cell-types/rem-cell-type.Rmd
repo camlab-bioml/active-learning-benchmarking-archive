@@ -5,16 +5,15 @@ date: "2022-09-10"
 params:
   markers: "../../markers/scRNASeq.yml"
   sce: "../../data/scRNASeq/scRNASeq-train.rds"
-  needed_cells: "20"
   rem_cell_type: "Megakaryocyte"
   initial: "ranking"
   AL_alg: "multinom"
   strat: "highest_entropy"
-  criterion: "entropy"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
 suppressPackageStartupMessages({
   library(tidyverse)
   library(yaml)
@@ -47,7 +46,7 @@ sces <- str_split(params$sce, " ")[[1]]
 
 
 ```{r warning = FALSE}
-uncertainties <- lapply(sces[1:2], function(x){
+uncertainties <- lapply(sces, function(x){
   # compare_entropies_rem_cell_type_wrapper <- function()
   # Calculate PCA embedding & filter genes
   features <- create_features(x)
