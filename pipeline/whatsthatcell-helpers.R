@@ -290,8 +290,7 @@ corrupt_labels <- function(df_expression, all_cell_types, prop_corrupt){
 
 ### [ REMOVING CELL TYPES ] #####
 # Used to read in a sce and convert to PCA/expression
-create_features <- function(sce_path){
-  sce <- readRDS(sce_path)
+create_features <- function(sce){
   if(any(grepl("CD16_32", rownames(sce)))){
     rownames(sce)[grep("CD16_32", rownames(sce))] <- "CD16-32"
   }
@@ -437,6 +436,73 @@ acc_wrap <- function(tt) {
 }
 
 
+# ordering of methods for benchmarking
+get_ranked_mean_estimate_by_cohort <- function(acc){
+  lapply(unique(acc$cohort), function(x){
+    mean_estimate <- filter(acc, cohort == x) |> 
+      group_by(selection_procedure) |> 
+      summarise(mean_estimate = mean(na.omit(.estimate))) |> 
+      arrange(-mean_estimate)
+    
+    mean_estimate$rank <- 1:nrow(mean_estimate)
+    select(mean_estimate, -mean_estimate) |> 
+      mutate(cohort = x)
+  }) |> 
+    bind_rows()
+}
+
+get_cross_cohort_mean_ranked_estimate <- function(acc){
+  acc |> 
+    group_by(selection_procedure) |> 
+    summarise(mean_rank = mean(rank)) |> 
+    arrange(-mean_rank)
+}
+
+
+### Functions
+al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NULL){
+  sel_acc <- filter(acc, corrupted == 0) |> 
+    filter(rand == 0 | is.na(rand)) |> 
+    filter(.metric == metric) |> 
+    filter(initial == initial_sel | is.na(initial))
+  
+  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
+  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
+    pull(selection_procedure)
+  
+  p <- sel_acc |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    ggplot() +
+    aes(x = as.character(cell_num), y = .estimate, fill = selection_procedure) +
+    geom_boxplot() +
+    scale_fill_manual(values = sel_meth_cols) +
+    whatsthatcell_theme() +
+    facet_grid(.metric ~ cohort) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  
+  if(!is.null(n_cells)){
+    p <- p + labs(x = n_cells)
+  }else{
+    p <- p +
+      theme(axis.text.x = element_blank(),
+            axis.title.x = element_blank(),
+            axis.ticks.x = element_blank())
+  }
+}
+
+full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
+  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel)
+  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel)
+  kap <- al_selection(acc, "kap", AL_alg, initial_sel)
+  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel)
+  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, n_cells = "Number of cells")
+  
+  (bal_acc / f1 / kap / mcc / sens) +
+    plot_layout(guides = "collect") +
+    plot_annotation(title = title)
+}
+
+
 ### [ PLOTTING ] ####
 createHeatmap <- function(sce,
                           cell_type_column = "cell_type",
@@ -477,7 +543,7 @@ createHeatmap <- function(sce,
 
 
 
-cell_type_colours <- function(modality) {
+cell_type_colours <- function(modality, include_unassigned = TRUE) {
   pal <- c("#8B5B42", "#AF4EA9", "#FFB60A", "#79E200", "#0024DD", "#6CC1FF",
            "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d", '#FD4FBD')
   
@@ -490,8 +556,7 @@ cell_type_colours <- function(modality) {
     "CD14+ monocyte" = pal[8], 
     "Megakaryocyte" = pal[9],
     "Natural killer cell" = pal[10],
-    "Plasmacytoid dendritic cell" = pal[6],
-    'unassigned' = "grey60"
+    "Plasmacytoid dendritic cell" = pal[6]
   )
   snRNASeq_colours <- c(
     "Fibroblast" = pal[1],
@@ -503,8 +568,7 @@ cell_type_colours <- function(modality) {
     "Schwann" = pal[4],
     "Atypical_Ductal" = pal[7],
     "Endocrine" = pal[8],
-    "Acinar" = pal[6],
-    'unassigned' = "grey60"
+    "Acinar" = pal[6]
   )
   CyTOF_colours <- c(
     "B-cell Frac A-C (pro-B cells)" = pal[2],
@@ -513,9 +577,14 @@ cell_type_colours <- function(modality) {
     "CMP" = pal[3],
     'GMP' = pal[4],
     "CLP" = pal[8],
-    "MPP" = pal[9],
-    'unassigned' = "grey60"
+    "MPP" = pal[9]
   )
+  
+  if(include_unassigned){
+    scRNASeq_colours <- c(scRNASeq_colours, c('unassigned' = "grey60"))
+    snRNASeq_colours <- c(snRNASeq_colours, c('unassigned' = "grey60"))
+    CyTOF_colours <- c(CyTOF_colours, c('unassigned' = "grey60"))
+  }
   
   if(modality == "scRNASeq"){
     scRNASeq_colours
