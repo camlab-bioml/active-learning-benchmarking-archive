@@ -3,7 +3,7 @@ title: "Benchmark predictive labeling"
 output: html_document
 date: "2022-07-30"
 params:
-  acc: "../../output/v4/results/benchmark-predictive-labeling-CyTOF.tsv"
+  acc: "../../output/v6/results/benchmark-predictive-labeling-CyTOF.tsv"
 ---
 
 ```{r setup, include=FALSE}
@@ -15,106 +15,99 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(yardstick)
   library(ggplot2)
+  library(patchwork)
 })
 source("../../pipeline/whatsthatcell-helpers.R")
 ```
 
+
 ```{r}
-acc <- read_tsv(params$acc) |>
-  filter(corrupted == 0) |>
-  filter(rand == 0 | is.na(rand))
+acc <- read_tsv(params$acc) |> 
+  mutate(AL_alg = sub(".*-ALAlg-", "",  selection_procedure),
+         selection_procedure = sub("-ALAlg-.*", "", selection_procedure))
 
 cell_nums <- as.character(sort(unique(acc$cell_num)))
 acc$cell_num <- factor(acc$cell_num, levels = cell_nums)
 
+head(acc)
+
 lapply(unique(acc$method), function(x){
-  sample_order <- acc |> 
-    filter(method == x) |>
-    group_by(cell_selection) |> 
-    summarise(mean_score = mean(na.omit(.estimate))) |> 
-    arrange(mean_score) |> 
-    pull(cell_selection)
-  acc |> 
-    filter(method == x) |> 
-    mutate(cell_selection = factor(cell_selection, levels = sample_order)) |> 
-    ggplot(aes(x = cell_selection, y = .estimate, color = selection_procedure)) +
-    #geom_boxplot() +
-    geom_jitter(width = 0.1) +
-    ylim(0, 1) +
-    labs(x = "High confidence cell selection", title = x, color = "Selection procedure") +
-    facet_grid(cell_num ~ .metric) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-})
-```
-
-
-
-```{r}
-lapply(unique(acc$method), function(x){
-  sample_order <- acc |> 
-    filter(method == x) |>
-    group_by(cell_selection) |> 
-    summarise(mean_score = mean(na.omit(.estimate))) |> 
-    arrange(mean_score) |> 
-    pull(cell_selection)
-  acc |> 
-    filter(method == x) |> 
-    mutate(cell_selection = factor(cell_selection, levels = sample_order)) |> 
-    ggplot(aes(x = cell_selection, y = .estimate, color = cell_num)) +
+  p1 <- acc |> 
+    filter(method == x, (pred_lab_alg == "rf" | is.na(pred_lab_alg))) |> 
+    ggplot(aes(x = as.character(cell_num), y = .estimate, fill = cell_selection)) +
     geom_boxplot() +
-    #geom_jitter(width = 0.05) +
     ylim(0, 1) +
-    labs(x = "High confidence cell selection", title = x, color = "Cell number") +
+    labs(title = "rf", fill = "High confidence\ncell selection") +
+    facet_grid( ~ .metric) +
+    theme_bw() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.title.x = element_blank())
+  
+  p2 <- acc |> 
+    filter(method == x, (pred_lab_alg == "multinom" | is.na(pred_lab_alg))) |> 
+    ggplot(aes(x = as.character(cell_num), y = .estimate, fill = cell_selection)) +
+    geom_boxplot() +
+    ylim(0, 1) +
+    labs(x = "Cell number", title = "multinom", fill = "High confidence\ncell selection") +
     facet_grid( ~ .metric) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-})
-```
-
-This distribution is now only over 99, baseline, entropy and maxp selection procedures
-```{r fig.width=12, fig.height=4}
-lapply(unique(acc$method), function(x){
-  sample_order <- acc |> 
-    filter(method == x) |>
-    group_by(selection_procedure) |> 
-    summarise(mean_score = mean(na.omit(.estimate))) |> 
-    arrange(mean_score) |> 
-    pull(selection_procedure)
-  acc |> 
-    filter(method == x) |> 
-    mutate(selection_procedure = factor(selection_procedure, levels = sample_order)) |> 
-    ggplot(aes(x = selection_procedure, y = .estimate, color = cell_num)) +
-    geom_boxplot() +
-    #geom_jitter(width = 0.05) +
-    ylim(0, 1) +
-    labs(x = "Cell selection procedure", title = x, color = "Cell number") +
-    facet_grid( ~ .metric) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  
+  p1 / p2 + plot_annotation(title = x) +
+    plot_layout(guides = "collect")
 })
 ```
 
 
-```{r fig.width=8, fig.height=9}
-lapply(unique(acc$method), function(x){
-  sample_order <- acc |> 
-    filter(method == x) |>
-    group_by(selection_procedure) |> 
-    summarise(mean_score = mean(na.omit(.estimate))) |> 
-    arrange(mean_score) |> 
-    pull(selection_procedure)
-  acc |> 
-    filter(method == x) |> 
-    mutate(selection_procedure = factor(selection_procedure, levels = sample_order)) |> 
-    ggplot(aes(x = selection_procedure, y = .estimate)) +
-    geom_boxplot() +
-    #geom_jitter(width = 0.05) +
-    ylim(0, 1) +
-    labs(x = "Cell selection procedure", title = x) +
-    facet_grid(cell_num ~ .metric) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```{r fig.width=10, fig.height=8}
+baseline_acc <- acc |> 
+  select(-rand, -corrupted, -.estimator, -pred_lab_alg) |> 
+  filter(cell_selection == "baseline") |> 
+  unite("method", c(method, knn, res, cell_num, initial, seed, selection_procedure, .metric, AL_alg), sep = ",")
+
+pred_lab_acc <- acc |> 
+  select(-rand, -corrupted, -.estimator) |> 
+  filter(cell_selection != "baseline") |> 
+  unite("method", c(method, knn, res, cell_num, initial, seed, selection_procedure, .metric, AL_alg), sep = ',')
+
+acc_gap <- left_join(pred_lab_acc, 
+          select(baseline_acc, -cell_selection), 
+          by = "method",
+          suffix = c("_pred_lab", "_baseline")) |> 
+  mutate(gap = .estimate_baseline - .estimate_pred_lab) |> 
+  separate(method, c("method", "knn", "res", "cell_num", "initial", "seed", "selection_procedure", ".metric", "AL_alg"), sep = ",")
+  
+# 10k foot view
+acc_gap |> 
+  filter(method == "CyTOF-LDA",
+         pred_lab_alg == "rf") |> 
+  ggplot(aes(x = cell_selection, y = gap, fill = selection_procedure)) +
+  geom_boxplot() +
+  facet_grid(cell_num ~.metric) +
+  theme_bw()
+
+
+lapply(unique(acc_gap$method), function(m){
+  lapply(unique(acc_gap$pred_lab_alg), function(pred_alg){
+    lapply(c('random', 'ranking'), function(init){
+      lapply(c('rf', 'multinom'), function(al){
+          acc_gap |> 
+            filter(method == m,
+                   pred_lab_alg == pred_alg) |> 
+            filter(initial == init | is.na(initial) | initial == "NA") |> 
+            filter(AL_alg == al | is.na(AL_alg) | AL_alg == "NA") |> 
+            ggplot(aes(x = cell_selection, y = gap, fill = selection_procedure)) +
+            geom_hline(yintercept = 0) +
+            geom_boxplot() +
+            labs(title = paste0("Method: ", m, " pred lab alg: ", pred_alg,
+                                " Initial: ", init, " AL alg: ", al)) +
+            facet_grid(cell_num ~.metric) +
+            theme_bw()
+      })
+    })
+  })
 })
 ```
 
+]
