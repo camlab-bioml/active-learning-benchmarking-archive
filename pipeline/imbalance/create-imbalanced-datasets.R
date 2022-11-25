@@ -1,9 +1,11 @@
 suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
+
 set.seed(as.integer(snakemake@wildcards$s))
 
 sce <- readRDS(snakemake@input[['sce']])
+save.image('debug-imbalance.Rdata')
 
 majority_ct <- snakemake@params[['majority']]
 minority_ct <- snakemake@params[['minority']]
@@ -11,6 +13,7 @@ minority_ct <- snakemake@params[['minority']]
 if(is.null(sce$CellType)){
   sce$CellType <- sce$cell_type
 }
+
 
 # subset to majority and minority cell type datasets & sample
 big_sce <- sce[, sce$CellType == majority_ct]
