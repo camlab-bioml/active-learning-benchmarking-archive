@@ -43,9 +43,8 @@ gt <- tibble(cell_id = colnames(sce_subset),
              cell_type = sce_subset$CellType,
              method = "Seurat-clustering",
              params = paste0("knn-", snakemake@wildcards[['neighbors']], "-res-", 
-                             snakemake@wildcards[['res']], 'cell-num-', 
-                             snakemake@wildcards[['cell_num']], '-corruption_percentage-', 
-                             snakemake@wildcards[['corrupt']]))
+                             snakemake@wildcards[['res']], '-cell-num-', 
+                             snakemake@wildcards[['cell_num']]))
 
 
 saveRDS(sce_subset, snakemake@output[['sce']])

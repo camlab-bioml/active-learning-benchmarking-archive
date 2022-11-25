@@ -3,32 +3,33 @@ suppressPackageStartupMessages({
   library(tidyverse)
 })
 source("pipeline/whatsthatcell-helpers.R")
-save.image('debug-imbalance.Rdata')
-balanced_different <- list.files(snakemake@params[['balanced_diff']], full.names = TRUE)
-balanced_similar <- list.files(snakemake@params[['balanced_sim']], full.names = TRUE)
+#save.image('debug-acc.Rdata')
 
-imbalanced_different <- list.files(snakemake@params[['imbalanced_diff']], full.names = TRUE)
-imbalanced_similar <- list.files(snakemake@params[['imbalanced_sim']], full.names = TRUE)
+predictions <- lapply(snakemake@input$predictions, read_tsv) |>
+  bind_rows() |> 
+  mutate(filter_similarity = str_split_fixed(similarity, "-", 2)[,2]) |>
+  filter(filter_similarity == snakemake@wildcards$similarity) |> 
+  select(-filter_similarity)
 
-predictions <- lapply(list(balanced_different, balanced_similar, imbalanced_different, imbalanced_similar), function(x){
-    lapply(x, function(y){
-        read_tsv(y)
-    }) |>
-    bind_rows()
-}) |> bind_rows()
+sce <- readRDS(snakemake@input$sce)
+if(is.null(sce$CellType)){
+  sce$CellType <- sce$cell_type
+}
 
-gt <- lapply(snakemake@input[['sces']], function(x){
-    sce <- readRDS(x)
-    gt <- tibble(cell_id = colnames(sce),
-             annotated_cell_type = sce$CellType)
+if(snakemake@wildcards[['modality']] == "snRNASeq"){
+  colnames(sce) <- gsub("-", "_", colnames(sce))
+}
 
-    gt
-}) |> bind_rows()
+cell_types <- snakemake@params |> unlist()
+
+gt <- tibble(cell_id = colnames(sce),
+             annotated_cell_type = sce$CellType) |>
+  filter(annotated_cell_type %in% cell_types)
 
 predictions_gt <- left_join(predictions, gt) |>
-    separate(prediction_params, c('m1', 'm2', 'rm_it', 'set', 'rm_knn', 'knn', 
+    separate(prediction_params, c('m1', 'm2', 'rm_knn', 'knn', 
                      'rm_res', 'res', 'rm_cell_num', 'cell_num', 'rm_rand', 'rand', 
-                     'rm_corr', 'corrupted'), sep = '-') |>
+                     'rm_corr', 'corrupted', 'rm_init', 'init', 'rm_seed', 'seed'), sep = '-') |>
   unite(method, c(m1, m2), sep = '-') |> 
   mutate(selection_procedure = gsub("Active-Learning_entropy-strategy-", "", selection_procedure),
          selection_procedure = gsub("Active-Learning_maxp-strategy-", "", selection_procedure),
@@ -39,8 +40,8 @@ predictions_gt <- left_join(predictions, gt) |>
 
 acc <- predictions_gt |>
   filter(predicted_cell_type != "unassigned") |> 
-  group_by(method, set, knn, res, cell_num, rand, corrupted, strat, 
-           al, similarity, modality) |> 
+  group_by(method, knn, res, cell_num, rand, corrupted, init, seed, strat, 
+           al, cell_selection, similarity, modality) |> 
   acc_wrap()
 
 write_tsv(acc, snakemake@output[['acc']])

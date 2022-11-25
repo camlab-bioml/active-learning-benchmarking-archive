@@ -19,7 +19,7 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 ## Overall benchmark
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=12}
 f <- strsplit(params$accs, " ")[[1]]
 acc <- lapply(f, function(x){
   df <- read_tsv(x) |> 
@@ -32,62 +32,6 @@ acc <- lapply(f, function(x){
 sel_meth_cols <- hue_pal()(8)
 names(sel_meth_cols) <- unique(acc$selection_procedure)
 
-get_ranked_mean_estimate_by_cohort <- function(acc){
-  lapply(unique(acc$cohort), function(x){
-    mean_estimate <- filter(acc, cohort == x) |> 
-      group_by(selection_procedure) |> 
-      summarise(mean_estimate = mean(na.omit(.estimate))) |> 
-      arrange(-mean_estimate)
-    
-    mean_estimate$rank <- 1:nrow(mean_estimate)
-    select(mean_estimate, -mean_estimate) |> 
-      mutate(cohort = x)
-  }) |> 
-    bind_rows()
-}
-
-get_cross_cohort_mean_ranked_estimate <- function(acc){
-  acc |> 
-    group_by(selection_procedure) |> 
-    summarise(mean_rank = mean(rank)) |> 
-    arrange(-mean_rank)
-}
-
-
-### Functions
-al_selection <- function(acc, metric, active_learner, initial_sel){
-  sel_acc <- filter(acc, corrupted == 0) |> 
-    filter(rand == 0 | is.na(rand)) |> 
-    filter(.metric == metric) |> 
-    filter(initial == initial_sel | is.na(initial))
-  
-  cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
-  method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
-    pull(selection_procedure)
-  
-  sel_acc |> 
-    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
-    ggplot() +
-    aes(x = as.character(cell_num), y = .estimate, fill = selection_procedure) +
-    geom_boxplot() +
-    scale_fill_manual(values = sel_meth_cols) +
-    whatsthatcell_theme() +
-    facet_grid(.metric ~ cohort) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-}
-
-full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
-  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel)
-  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel)
-  kap <- al_selection(acc, "kap", AL_alg, initial_sel)
-  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel)
-  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel)
-  
-  (bal_acc / f1 / kap / mcc / sens) +
-    plot_layout(guides = "collect") +
-    plot_annotation(title = title)
-}
-
 full_acc_plot_wrapper(acc, "rf", "ranking", "RF - initial selection: ranked")
 
 full_acc_plot_wrapper(acc, "rf", "random", "RF - initial selection: random")
@@ -99,7 +43,7 @@ full_acc_plot_wrapper(acc, "multinom", "random", "LR - initial selection: random
 
 
 
-```{r fig.width=16, fig.height=10}
+```{r fig.width=16, fig.height=16}
 rf_or_lr <- function(acc, metric, initial_sel){
   sel_acc <- filter(acc, corrupted == 0) |> 
     filter(rand == 0 | is.na(rand)) |> 
@@ -137,7 +81,7 @@ rf_or_lr_wrapper(acc, "random")
 ```
 
 
-```{r}
+```{r fig.width=16, fig.height=16}
 random_or_ranked <- function(acc, metric, AL_alg){
   sel_acc <- filter(acc, corrupted == 0) |> 
     filter(rand == 0 | is.na(rand)) |> 
@@ -178,9 +122,10 @@ random_or_ranked_wrapper(acc, "multinom")
 
 Should these be over all methods or just best performing?
 
-```{r fig.width=14, fig.height=9}
-plot_corruption <- function(acc, metric, initial_sel){
+```{r fig.width=14, fig.height=16}
+plot_corruption <- function(acc, metric, initial_sel, al){
   sel_acc <- filter(acc, rand == 0) |> 
+    filter(AL_alg == al) |> 
     filter(.metric == metric) |> 
     filter(initial == initial_sel)
   
@@ -198,20 +143,22 @@ plot_corruption <- function(acc, metric, initial_sel){
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 }
 
-corruption_wrapper <- function(acc, initial_sel){
-  bal_ac <- plot_corruption(acc, "bal_accuracy", initial_sel)
-  f1 <- plot_corruption(acc, "f_meas", initial_sel)
-  kap <- plot_corruption(acc, "kap", initial_sel)
-  mcc <- plot_corruption(acc, "mcc", initial_sel)
-  sens <- plot_corruption(acc, "sensitivity", initial_sel)
+corruption_wrapper <- function(acc, initial_sel, al){
+  bal_ac <- plot_corruption(acc, "bal_accuracy", initial_sel, al)
+  f1 <- plot_corruption(acc, "f_meas", initial_sel, al)
+  kap <- plot_corruption(acc, "kap", initial_sel, al)
+  mcc <- plot_corruption(acc, "mcc", initial_sel, al)
+  sens <- plot_corruption(acc, "sensitivity", initial_sel, al)
   
   (bal_ac / f1 / kap / mcc / sens) +
     plot_layout(guides = "collect")
 
 }
 
-corruption_wrapper(acc, 'random')
-corruption_wrapper(acc, 'ranking')
+corruption_wrapper(acc, 'random', 'rf')
+corruption_wrapper(acc, 'ranking', 'rf')
+corruption_wrapper(acc, 'random', 'multinom')
+corruption_wrapper(acc, 'ranking', 'multinom')
 
 acc |> 
   filter(rand == 0 & initial == "random") |> 
@@ -235,9 +182,10 @@ acc |>
 
 ## Effect of random sampling
 
-```{r fig.width=14, fig.height=9}
-plot_random <- function(acc, metric, initial_sel){
+```{r fig.width=14, fig.height=16}
+plot_random <- function(acc, metric, initial_sel, al){
   sel_acc <- filter(acc, corrupted == 0 & !is.na(rand)) |> 
+    filter(AL_alg == al) |> 
     filter(.metric == metric) |> 
     filter(initial == initial_sel)
   
@@ -255,19 +203,21 @@ plot_random <- function(acc, metric, initial_sel){
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 }
 
-random_wrapper <- function(acc, initial_sel){
-  bal_ac <- plot_random(acc, "bal_accuracy", initial_sel)
-  f1 <- plot_random(acc, "f_meas", initial_sel)
-  kap <- plot_random(acc, "kap", initial_sel)
-  mcc <- plot_random(acc, "mcc", initial_sel)
-  sens <- plot_random(acc, "sensitivity", initial_sel)
+random_wrapper <- function(acc, initial_sel, al){
+  bal_ac <- plot_random(acc, "bal_accuracy", initial_sel, al)
+  f1 <- plot_random(acc, "f_meas", initial_sel, al)
+  kap <- plot_random(acc, "kap", initial_sel, al)
+  mcc <- plot_random(acc, "mcc", initial_sel, al)
+  sens <- plot_random(acc, "sensitivity", initial_sel, al)
   
   (bal_ac / f1 / kap / mcc / sens) +
     plot_layout(guides = "collect")
 }
 
-random_wrapper(acc, "ranking")
-random_wrapper(acc, "random")
+random_wrapper(acc, "ranking", 'rf')
+random_wrapper(acc, "random", 'rf')
+random_wrapper(acc, "ranking", 'multinom')
+random_wrapper(acc, "random", 'multinom')
 
 acc |> 
   filter(corrupted == 0 & !is.na(rand)) |> 

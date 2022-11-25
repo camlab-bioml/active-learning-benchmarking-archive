@@ -43,19 +43,6 @@ df_PCA <- bind_cols(
   tibble(cell_type = sce$CellType)
 )
 
-df_PCA <- select(df_expression, -X1) |> 
-  as.matrix() |> 
-  prcomp(center = TRUE, scale. = TRUE)
-
-df_PCA <- df_PCA$x |> 
-  as.data.frame()
-
-df_PCA <- bind_cols(
-  tibble(X1 = df_expression$X1),
-  df_PCA[,1:20], 
-  tibble(cell_type = sce$CellType)
-)
-
 # Separate into labelled and unlabeled 
 labelled <- df_PCA %>% 
   filter(X1 %in% selected_cells$cell_id)
@@ -161,10 +148,6 @@ if(snakemake@wildcards[['selection_procedure']] == "Active-Learning_entropy" |
 
   selected_cells$iteration <- as.character(selected_cells$iteration)
 }else if(snakemake@wildcards[['selection_procedure']] == "random"){
-  entropy_cells$set <- snakemake@wildcards[['set']]
-  maxp_cells$set <- snakemake@wildcards[['set']]
-  highp_cells$set <- snakemake@wildcards[['set']]
-
   entropy_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-entropy-AL_alg-", snakemake@wildcards[['AL_alg']])
   maxp_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-maxp-AL_alg-", snakemake@wildcards[['AL_alg']])
   highp_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-99p-AL_alg-", snakemake@wildcards[['AL_alg']])

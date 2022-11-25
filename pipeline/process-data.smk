@@ -7,13 +7,13 @@ process_data_output = {
     'dataset_dimensionality': expand(output + 'reports/{modality}-dataset-dimensionality-seed-{s}.html', modality = modalities, s = train_test_seeds),
 
     # Random subsets
-    'sce_subset1': expand(output + 'data/{modality}/random/random-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.rds', modality = modalities, cell_num = cell_numbers, s = train_test_seeds),
-    'gt_subset1': expand(output + 'data/{modality}/random/random-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.tsv', modality = modalities, cell_num = cell_numbers, s = train_test_seeds),
+    'sce_subset1': expand(output + 'data/{modality}/random/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.rds', modality = modalities, cell_num = cell_numbers, s = train_test_seeds),
+    'gt_subset1': expand(output + 'data/{modality}/random/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-NA-resolution-NA-seed-{s}-{cell_num}_cells.tsv', modality = modalities, cell_num = cell_numbers, s = train_test_seeds),
     
     # Seurat clustering subsets
-    'seu_sce': expand(output + 'data/{modality}/Seurat-clustering/Seurat-clustering-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.rds', 
+    'seu_sce': expand(output + 'data/{modality}/Seurat-clustering/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.rds', 
         modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution, cell_num = cell_numbers, s = train_test_seeds),
-    'gt_seu': expand(output + 'data/{modality}/Seurat-clustering/Seurat-clustering-Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.tsv', 
+    'gt_seu': expand(output + 'data/{modality}/Seurat-clustering/Init_NA-strat-NA-ALAlg-NA-rand_sel-0-corr-0-knn_neighbors-{neighbors}-resolution-{res}-seed-{s}-{cell_num}_cells.tsv', 
         modality = modalities, neighbors = Seurat_neighbors, res = Seurat_resolution, cell_num = cell_numbers, s = train_test_seeds),
 }
 

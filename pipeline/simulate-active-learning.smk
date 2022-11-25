@@ -1,4 +1,11 @@
-
+def get_entropy_files(AL_type):
+    if AL_type == "Active-Learning_entropy":
+        f = expand(output + 'data/{{modality}}/uncertainties/Active-Learning_entropy/Init-{{initial}}-strat-{strat}-al-{{AL_alg}}-rand_sel-{{rand}}-corr-{{corrupt}}-seed-{{s}}.tsv',
+            strat = selection_expansion_dict['Active-Learning_entropy']['strategy'])
+    elif AL_type == 'Active-Learning_maxp':
+        f = expand(output + 'data/{{modality}}/uncertainties/Active-Learning_maxp/Init-{{initial}}-strat-{strat}-al-{{AL_alg}}-rand_sel-{{rand}}-corr-{{corrupt}}-seed-{{s}}.tsv',
+            strat = selection_expansion_dict2['Active-Learning_maxp']['strategy'])
+    return f
 
 active_learner = {
     # 'Create_labels_entropy': expand(output + 'data/{modality}/{AL_type}/Init-{initial}-strat-{strat}-al-{AL_alg}-rand_sel-{rand}-corr-{corrupt}-seed-{s}.tsv', 
@@ -83,15 +90,6 @@ selection_expansion_dict2 = {
                'random_selection': random_percentages,
                'corruption': corruption_percentages}
 }
-
-def get_entropy_files(AL_type):
-    if AL_type == "Active-Learning_entropy":
-        f = expand(output + 'data/{{modality}}/uncertainties/Active-Learning_entropy/Init-{{initial}}-strat-{strat}-al-{{AL_alg}}-rand_sel-{{rand}}-corr-{{corrupt}}-seed-{{s}}.tsv',
-            strat = selection_expansion_dict['Active-Learning_entropy']['strategy'])
-    elif AL_type == 'Active-Learning_maxp':
-        f = expand(output + 'data/{{modality}}/uncertainties/Active-Learning_maxp/Init-{{initial}}-strat-{strat}-al-{{AL_alg}}-rand_sel-{{rand}}-corr-{{corrupt}}-seed-{{s}}.tsv',
-            strat = selection_expansion_dict2['Active-Learning_maxp']['strategy'])
-    return f
 
 ## CHECKED
 rule visualize_entropies:

@@ -6,7 +6,7 @@ source("pipeline/whatsthatcell-helpers.R")
 
 log <- file(snakemake@log[[1]], open="wt")
 sink(log)
-save.image(paste0('debug-acc-', snakemake@wildcards[['modality']], '-0.Rdata'))
+
 sce <- readRDS(snakemake@input[['sce']])
 if(is.null(sce$CellType)){
   sce$CellType <- sce$cell_type

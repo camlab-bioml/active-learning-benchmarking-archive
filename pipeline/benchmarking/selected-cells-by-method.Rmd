@@ -9,6 +9,7 @@ params:
   AL_maxp_path: ""
   sce: "../../data/CyTOF/CyTOF-train.rds"
   modality: ""
+  seed: ""
 ---
 
 ```{r setup, include=FALSE}
@@ -27,6 +28,7 @@ source("../../pipeline/whatsthatcell-helpers.R")
 
 
 ```{r message = F}
+save.image(paste0("debug-cell-select-", params$modality, "-", params$seed, ".Rdata")
 if(params$modality == "scRNASeq" | params$modality == "snRNASeq"){
   fig_width = 12
   fig_height = 10

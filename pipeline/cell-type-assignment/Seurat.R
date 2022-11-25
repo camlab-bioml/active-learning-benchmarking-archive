@@ -103,36 +103,36 @@ assignments %>%
 
 ### Create diagnostic plots
 # Positive markers
-lapply(1:length(markers), function(x){
-  cell_types <- names(markers[x]) %>% 
-    gsub(" ", "-", .)
+# lapply(1:length(markers), function(x){
+#   cell_types <- names(markers[x]) %>% 
+#     gsub(" ", "-", .)
   
-  out_path <- snakemake@params[['positive_markers_diagnostic']] %>% 
-    gsub("\\[", "{", .) %>% 
-    gsub("\\]", "}", .)
-  out <- glue(out_path)
+#   out_path <- snakemake@params[['positive_markers_diagnostic']] %>% 
+#     gsub("\\[", "{", .) %>% 
+#     gsub("\\]", "}", .)
+#   out <- glue(out_path)
   
-  pdf(out, width = 12)
-  print(FeaturePlot(seu, features = markers[[x]]$positive))
-  dev.off()
-})
+#   pdf(out, width = 12)
+#   print(FeaturePlot(seu, features = markers[[x]]$positive))
+#   dev.off()
+# })
 
-# Negative markers
-lapply(1:length(markers), function(x){
-  cell_types <- names(markers[x]) %>% 
-    gsub(" ", "-", .)
+# # Negative markers
+# lapply(1:length(markers), function(x){
+#   cell_types <- names(markers[x]) %>% 
+#     gsub(" ", "-", .)
   
-  out_path <- snakemake@params[['negative_markers_diagnostic']] %>% 
-    gsub("\\[", "{", .) %>% 
-    gsub("\\]", "}", .)
-  out <- glue(out_path)
+#   out_path <- snakemake@params[['negative_markers_diagnostic']] %>% 
+#     gsub("\\[", "{", .) %>% 
+#     gsub("\\]", "}", .)
+#   out <- glue(out_path)
   
-  if(!is.null(markers[[x]]$negative)){
-    pdf(out, width = 12)
-    print(FeaturePlot(seu, features = markers[[x]]$negative))
-    dev.off()
-  }
-})
+#   if(!is.null(markers[[x]]$negative)){
+#     pdf(out, width = 12)
+#     print(FeaturePlot(seu, features = markers[[x]]$negative))
+#     dev.off()
+#   }
+# })
 
 
 ### Cell type umap

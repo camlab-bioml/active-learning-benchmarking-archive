@@ -73,9 +73,48 @@ original_cell_types = {
     'snRNASeq': snRNASeq_cell_types
 }
 
-include: 'pipeline/process-data.smk'
+selection_expansion_dict = {
+    'Seurat-clustering': {
+        'initial': 'NA',
+        'neighbors': Seurat_neighbors,
+        'res': Seurat_resolution,
+        'strategy': 'NA',
+        'AL_alg': 'NA',
+        'random_selection': [0],
+        'corruption': [0]
+    },
+    'random': {
+        'initial': 'NA',
+        'neighbors': ['NA'],
+        'res': ['NA'],
+        'strategy': 'NA',
+        'AL_alg': 'NA',
+        'random_selection': [0],
+        'corruption': [0]
+    },
+    'Active-Learning_entropy': {
+        'initial': initial_selections,
+        'neighbors': ['NA'],
+        'res': ['NA'],
+        'strategy': ['0.75_quant_entropy', '0.95_quant_entropy', 'highest_entropy'],
+        'AL_alg': AL_methods,
+        'random_selection': random_percentages,
+        'corruption': corruption_percentages
+    },
+    'Active-Learning_maxp': {
+       'initial': initial_selections,
+       'neighbors': ['NA'],
+        'res': ['NA'],
+        'strategy': ['0.05_quant_maxp', '0.25_quant_maxp', 'lowest_maxp'],
+        'AL_alg': AL_methods,
+        'random_selection': random_percentages,
+        'corruption': corruption_percentages
+    }
+}
+
+#include: 'pipeline/process-data.smk'
 include: 'pipeline/cell-type-predictions.smk'
-include: 'pipeline/simulate-active-learning.smk'
+#include: 'pipeline/simulate-active-learning.smk'
 include: 'pipeline/visualizations.smk'
 #include: 'pipeline/predictive-labeling.smk'
 include: 'pipeline/imbalance.smk'
@@ -86,8 +125,8 @@ rule all:
         #process_data_output.values(),
         #cell_type_predictions.values(),
         #active_learner.values(),
-        viz.values(),
+        #viz.values(),
         #pred_lab.values(),
         #imbalance.values(),
-        #rem_cell_type.values()
+        rem_cell_type.values()
 

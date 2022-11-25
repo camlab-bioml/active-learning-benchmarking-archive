@@ -45,6 +45,20 @@ if(snakemake@wildcards[['initial']] == 'ranking'){
   df_expression$cell_type[random_cell_idx] <- df_expression$gt_cell_type[random_cell_idx]
 }
 
+if(!is.null(snakemake@wildcards[['similarity']])){
+  cell_types <- unique(df_expression$gt_cell_type)
+
+  one_of_each_cells <- lapply(cell_types, function(x){
+    select(df_expression, X1, gt_cell_type) |> 
+      filter(gt_cell_type == x) |> 
+      slice_head(n = 1) |> 
+      pull(X1)
+  }) |> unlist()
+
+  one_of_each_idx <- which(df_expression$X1 %in% one_of_each_cells)
+  df_expression$cell_type[one_of_each_idx] <- df_expression$gt_cell_type[one_of_each_idx]
+}
+
 ### [ ACTIVE LEARNING CELL TYPE ASSIGNMENT ] #####
 # create a list to save all entropies into
 entropies <- list()
@@ -67,8 +81,6 @@ df_PCA <- bind_cols(
          gt_cell_type = df_expression$gt_cell_type,
          iteration = df_expression$iteration)
 )
-
-print(table(df_PCA$cell_type))
 
 for(i in 1:max_AL_iterations){
   AL <- active_learning_wrapper(select(df_PCA, -gt_cell_type, -iteration), 

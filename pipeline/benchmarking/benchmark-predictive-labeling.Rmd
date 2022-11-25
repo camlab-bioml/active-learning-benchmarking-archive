@@ -21,7 +21,7 @@ source("../../pipeline/whatsthatcell-helpers.R")
 ```
 
 
-```{r}
+```{r fig.width = 9, fig.height = 5}
 acc <- read_tsv(params$acc) |> 
   mutate(AL_alg = sub(".*-ALAlg-", "",  selection_procedure),
          selection_procedure = sub("-ALAlg-.*", "", selection_procedure))
@@ -32,30 +32,15 @@ acc$cell_num <- factor(acc$cell_num, levels = cell_nums)
 head(acc)
 
 lapply(unique(acc$method), function(x){
-  p1 <- acc |> 
-    filter(method == x, (pred_lab_alg == "rf" | is.na(pred_lab_alg))) |> 
-    ggplot(aes(x = as.character(cell_num), y = .estimate, fill = cell_selection)) +
-    geom_boxplot() +
-    ylim(0, 1) +
-    labs(title = "rf", fill = "High confidence\ncell selection") +
-    facet_grid( ~ .metric) +
-    theme_bw() +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          axis.title.x = element_blank())
-  
-  p2 <- acc |> 
+  acc |> 
     filter(method == x, (pred_lab_alg == "multinom" | is.na(pred_lab_alg))) |> 
     ggplot(aes(x = as.character(cell_num), y = .estimate, fill = cell_selection)) +
     geom_boxplot() +
     ylim(0, 1) +
-    labs(x = "Cell number", title = "multinom", fill = "High confidence\ncell selection") +
+    labs(x = "Cell number", title = paste0("Method: ", x, " - multinom"), fill = "High confidence\ncell selection") +
     facet_grid( ~ .metric) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-  
-  p1 / p2 + plot_annotation(title = x) +
-    plot_layout(guides = "collect")
 })
 ```
 
@@ -75,39 +60,35 @@ acc_gap <- left_join(pred_lab_acc,
           select(baseline_acc, -cell_selection), 
           by = "method",
           suffix = c("_pred_lab", "_baseline")) |> 
-  mutate(gap = .estimate_baseline - .estimate_pred_lab) |> 
+  mutate(gap = .estimate_pred_lab - .estimate_baseline) |> 
   separate(method, c("method", "knn", "res", "cell_num", "initial", "seed", "selection_procedure", ".metric", "AL_alg"), sep = ",")
   
 # 10k foot view
-acc_gap |> 
-  filter(method == "CyTOF-LDA",
-         pred_lab_alg == "rf") |> 
-  ggplot(aes(x = cell_selection, y = gap, fill = selection_procedure)) +
-  geom_boxplot() +
-  facet_grid(cell_num ~.metric) +
-  theme_bw()
+lapply(unique(acc$method), function(x){
+    acc_gap |> 
+      filter(method == x) |> 
+      ggplot(aes(x = cell_selection, y = gap, fill = selection_procedure)) +
+      geom_boxplot() +
+      facet_grid(cell_num ~ .metric) +
+      theme_bw()
+})
 
 
 lapply(unique(acc_gap$method), function(m){
   lapply(unique(acc_gap$pred_lab_alg), function(pred_alg){
     lapply(c('random', 'ranking'), function(init){
-      lapply(c('rf', 'multinom'), function(al){
-          acc_gap |> 
-            filter(method == m,
-                   pred_lab_alg == pred_alg) |> 
-            filter(initial == init | is.na(initial) | initial == "NA") |> 
-            filter(AL_alg == al | is.na(AL_alg) | AL_alg == "NA") |> 
-            ggplot(aes(x = cell_selection, y = gap, fill = selection_procedure)) +
-            geom_hline(yintercept = 0) +
-            geom_boxplot() +
-            labs(title = paste0("Method: ", m, " pred lab alg: ", pred_alg,
-                                " Initial: ", init, " AL alg: ", al)) +
-            facet_grid(cell_num ~.metric) +
-            theme_bw()
-      })
+      acc_gap |> 
+        filter(method == m,
+               pred_lab_alg == pred_alg) |> 
+        filter(initial == init | is.na(initial) | initial == "NA") |> 
+        ggplot(aes(x = cell_selection, y = gap, fill = selection_procedure)) +
+        geom_hline(yintercept = 0) +
+        geom_boxplot() +
+        labs(title = paste0("Method: ", m, " pred lab alg: ", pred_alg,
+                            " Initial: ", init)) +
+        facet_grid(cell_num ~.metric) +
+        theme_bw()
     })
   })
 })
 ```
-
-]
