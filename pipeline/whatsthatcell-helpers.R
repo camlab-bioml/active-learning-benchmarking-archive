@@ -169,8 +169,7 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
   cells
 }
 
-select_cells_classifier <- function(df_expression, AL_method, selection_method, amount = 10, 
-                                    random_selection, selection_criterion = "entropy") {
+fit_AL_classifier <- function(df_expression, AL_method){
   annotated_cells <- df_expression %>% 
     filter(!is.na(cell_type)) %>% 
     filter(cell_type != "Skipped", cell_type != "Unclear")
@@ -192,6 +191,13 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
                     method = AL_method,
                     trace = FALSE,
                     trControl = tctrl)
+
+  ModelFit
+}
+
+select_cells_classifier <- function(df_expression, AL_method, selection_method, amount = 10, 
+                                    random_selection, selection_criterion = "entropy") {
+  ModelFit <- fit_AL_classifier(df_expression, AL_method)
   
   predicted_scores <- predict(ModelFit, 
                               select(left_cells, -X1, -cell_type),
@@ -252,12 +258,12 @@ cell_ranking_wrapper <- function(df, markers, number_cells = 20){
 
 
 active_learning_wrapper <- function(df, AL_method, selection_method, iteration, 
-                                    entropies = NULL, random_selection, selection_criterion = "entropy"){
+                                    entropies = NULL, random_selection, selection_criterion = "entropy", num_cells = 10){
   # AL selected cells
   AL <- select_cells_classifier(df_expression = df, 
                                 AL_method = AL_method, 
                                 selection_method = selection_method,
-                                amount = 10, 
+                                amount = num_cells, 
                                 random_selection = random_selection,
                                 selection_criterion = selection_criterion)
   
@@ -322,7 +328,7 @@ create_features <- function(sce){
   list(expression = df_expression, PCA = df_PCA)
 }
 
-rem_cell_type_AL_wrapper <- function(df, AL_alg, strat, rand, criterion, iter = 3){
+rem_cell_type_AL_wrapper <- function(df, AL_alg, strat, rand, criterion, iter = 3, num_cells){
   set.seed(1)
   entropies <- list()
   for(i in 1:iter){
@@ -392,15 +398,21 @@ get_training_type_kept <- function(df, cell_type_to_rem, initial, markers,
                                    selected_cells_df){
   # Find the set of cells of the type that were removed above with the highest marker expression
   missing_df_expression <- filter(df, gt_cell_type == cell_type_to_rem)
+
+  if(nrow(missing_df_expression) < 3){
+    ranked_cell_num <- nrow(missing_df_expression)
+  }else{
+    ranked_cell_num <- 3
+  }
   
   if(initial == "ranking"){
     # Which 3 cells of this type are selected by ranking?
     missing_df_expression <- cell_ranking_wrapper(missing_df_expression, 
-                                                  markers, 3) |> 
+                                                  markers, ranked_cell_num) |> 
       filter(!is.na(cell_type)) |> 
       select(X1, cell_type)
   }else if(initial == "random"){
-    random_cell_idx <- sample(1:nrow(missing_df_expression), 3)
+    random_cell_idx <- sample(1:nrow(missing_df_expression), ranked_cell_num)
     missing_df_expression$cell_type[random_cell_idx] <- missing_df_expression$gt_cell_type[random_cell_idx]
     
     missing_df_expression <- filter(missing_df_expression, !is.na(cell_type)) |> 
@@ -408,7 +420,7 @@ get_training_type_kept <- function(df, cell_type_to_rem, initial, markers,
   }
   
   # Create three datasets with 1, 2 and 3 cells of the removed type
-  kept_cell_type <- lapply(1:3, function(x){
+  kept_cell_type <- lapply(1:ranked_cell_num, function(x){
     bind_rows(
       slice_head(selected_cells_df, n = (nrow(selected_cells_df) - x)), # original dataset with cell type removed
       slice_head(missing_df_expression, n = x) # Dataset created with only said cell type
