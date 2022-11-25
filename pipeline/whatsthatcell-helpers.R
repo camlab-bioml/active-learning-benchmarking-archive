@@ -169,14 +169,7 @@ select_maxp <- function(maxp_df, method = "lowest_maxp", amount, random_selectio
   cells
 }
 
-fit_AL_classifier <- function(df_expression, AL_method){
-  annotated_cells <- df_expression %>% 
-    filter(!is.na(cell_type)) %>% 
-    filter(cell_type != "Skipped", cell_type != "Unclear")
-  
-  left_cells <- df_expression %>% 
-    filter(is.na(cell_type))
-  
+fit_AL_classifier <- function(annotated_cells, AL_method){
   training_set_size <- nrow(annotated_cells)
   if(training_set_size < 50){
     bootstrap_reps <- 1000
@@ -195,14 +188,8 @@ fit_AL_classifier <- function(df_expression, AL_method){
   ModelFit
 }
 
-select_cells_classifier <- function(df_expression, AL_method, selection_method, amount = 10, 
-                                    random_selection, selection_criterion = "entropy") {
-  ModelFit <- fit_AL_classifier(df_expression, AL_method)
-  
-  predicted_scores <- predict(ModelFit, 
-                              select(left_cells, -X1, -cell_type),
-                              type = "prob")
-  
+entropy_maxp_cell_selection <- function(selection_criterion, predicted_scores, left_cells, selection_method, 
+                                        amount, random_selection, annotated_cells){
   if(selection_criterion == "entropy"){
     entropies <- apply(predicted_scores, 1, calculate_entropy)
     
@@ -237,9 +224,30 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
                                   criterion = selection_criterion)
   }
   
+  list(selected_cells, criterion_table)
+}
+
+select_cells_classifier <- function(df_expression, AL_method, selection_method, amount = 10, 
+                                    random_selection, selection_criterion = "entropy") {
+  annotated_cells <- df_expression %>% 
+    filter(!is.na(cell_type)) %>% 
+    filter(cell_type != "Skipped", cell_type != "Unclear")
   
-  return_list <- list(selected_cells = selected_cells, 
-                      criterion_table = criterion_table)
+  left_cells <- df_expression %>% 
+    filter(is.na(cell_type))
+  
+  ModelFit <- fit_AL_classifier(annotated_cells, left_cells, AL_method)
+  
+  predicted_scores <- predict(ModelFit, 
+                              select(left_cells, -X1, -cell_type),
+                              type = "prob")
+  
+  sel_cells <- entropy_maxp_cell_selection(selection_criterion, left_cells, selection_method,
+                                           amount, random_selection, annotated_cells)
+  
+  
+  return_list <- list(selected_cells = sel_cells$selected_cells, 
+                      criterion_table = sel_cells$criterion_table)
   return(return_list)
 }
 
