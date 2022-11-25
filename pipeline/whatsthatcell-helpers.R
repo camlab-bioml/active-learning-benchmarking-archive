@@ -553,6 +553,23 @@ createHeatmap <- function(sce,
   type_exprs
 }
 
+create_entropy_boxplot <- function(vals, y_lab, colors){
+  box <- vals %>% 
+    mutate(no_cells_annotated = factor(no_cells_annotated)) %>% 
+    ggplot(aes(x=no_cells_annotated, y=criterion_val, 
+               group = no_cells_annotated, fill = no_cells_annotated)) + 
+    geom_boxplot() +
+    theme_bw() +
+    scale_fill_manual(values = colors) +
+    labs(y = y_lab) +
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.ticks.x = element_blank())
+  
+  box
+}
+
 
 
 cell_type_colours <- function(modality, include_unassigned = TRUE) {
@@ -609,7 +626,8 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
 
 
 whatsthatcell_theme <- function(){
-  theme_bw()
+  theme_bw() +
+    theme(strip.background=element_rect(fill="white"))
 }
 
 
