@@ -3,13 +3,13 @@ suppressPackageStartupMessages({
 })
 source("pipeline/whatsthatcell-helpers.R")
 
-files <- list.files("output/v6/results/AL_f1/CyTOF/", full.names = TRUE)
-
-acc <- lapply(files, read_tsv) |> 
+maxp_acc <- lapply(snakemake@input$maxp_accs, read_tsv) |> 
+  bind_rows()
+entr_acc <- lapply(snakemake@input$entr_accs, read_tsv) |> 
   bind_rows()
 
 pdf(snakemake@output$pdf, width = 12, height = 6)
-  acc |> 
+  bind_rows(maxp_acc, bind_rows) |> 
     separate(params, c("rm_init", "init", "rm_strat", "strat", "rm_al", "AL", "rm_rand",
                        "rand", "rm_cor", "corr", "rm_s", "seed"), "-") |> 
     select(-starts_with("rm")) |> 
@@ -31,6 +31,4 @@ pdf(snakemake@output$pdf, width = 12, height = 6)
     facet_grid(init + AL ~ strat) +
     whatsthatcell_theme()
 dev.off()
-
-
 
