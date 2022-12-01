@@ -7,6 +7,7 @@ suppressPackageStartupMessages({
   library(fabricatr)
 })
 source("pipeline/whatsthatcell-helpers.R")
+set.seed(1)
 #save.image('debug-rem-cellType.Rdata')
 cell_type_to_rem <- snakemake@wildcards$rem_cell_type
 markers <- read_yaml(snakemake@input$markers)
@@ -44,7 +45,9 @@ missing_cell_type_uncertainty <- rem_cell_type_AL_wrapper(missing_cell_type_PCA,
                                                           snakemake@wildcards$AL_alg,
                                                           snakemake@wildcards$strat,
                                                           rand = 0,
-                                                          criterion = criterion) |>
+                                                          criterion = criterion,
+                                                          iter = 1,
+                                                          num_cells = 10) |>
   bind_rows() |> 
   as_tibble() |> 
   mutate(comp = "missing cell types",

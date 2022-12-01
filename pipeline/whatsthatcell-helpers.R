@@ -224,7 +224,7 @@ entropy_maxp_cell_selection <- function(selection_criterion, predicted_scores, l
                                   criterion = selection_criterion)
   }
   
-  list(selected_cells, criterion_table)
+  list(selected_cells = selected_cells, criterion_table = criterion_table)
 }
 
 select_cells_classifier <- function(df_expression, AL_method, selection_method, amount = 10, 
@@ -236,13 +236,13 @@ select_cells_classifier <- function(df_expression, AL_method, selection_method, 
   left_cells <- df_expression %>% 
     filter(is.na(cell_type))
   
-  ModelFit <- fit_AL_classifier(annotated_cells, left_cells, AL_method)
+  ModelFit <- fit_AL_classifier(annotated_cells, AL_method)
   
   predicted_scores <- predict(ModelFit, 
                               select(left_cells, -X1, -cell_type),
                               type = "prob")
   
-  sel_cells <- entropy_maxp_cell_selection(selection_criterion, left_cells, selection_method,
+  sel_cells <- entropy_maxp_cell_selection(selection_criterion, predicted_scores, left_cells, selection_method,
                                            amount, random_selection, annotated_cells)
   
   
@@ -348,6 +348,11 @@ rem_cell_type_AL_wrapper <- function(df, AL_alg, strat, rand, criterion, iter = 
                                   rand,
                                   criterion)
     
+    if(criterion == 'entropy'){
+      num_cell_types <- unique(na.omit(df$cell_type)) |> 
+        length()
+      AL$criterion_table <- AL$criterion_table$criterion_val / log(num_cell_types, 2)
+    }
     entropies[[length(entropies) + 1]] <- AL$criterion_table
     
     # What index do the selected cells correspond to?
