@@ -8,7 +8,10 @@ suppressPackageStartupMessages({
 source("pipeline/whatsthatcell-helpers.R")
 
 
-sce <- readRDS("data/scRNASeq/scRNASeq-train-seed-0.rds")
+sce <- readRDS(snakemake@input$sce)
+if(is.null(sce$CellType)){
+  sce$CellType <- sce$cell_type
+}
 
 df_expression <- load_scs(sce) |> 
   select(-X1)
@@ -33,7 +36,6 @@ df_PCA <- df_PCA$x[,1:20] |>
   as.data.frame() |> 
   mutate(cell_type = sce$CellType)
 
-
 celltypes <- unique(df_PCA$cell_type)
 
 cell_type_sims <- lapply(celltypes, function(cell_type_i){
@@ -54,10 +56,18 @@ cell_type_sims <- lapply(celltypes, function(cell_type_i){
   sim
 }) |> bind_rows()
 
-
-
 cell_type_sims <- as.data.frame(cell_type_sims)
 rownames(cell_type_sims) <- celltypes
-Heatmap(cell_type_sims)
+
+pdf(snakemake@output$heatmap)
+  Heatmap(cell_type_sims)
+dev.off()
+
+cell_type_sims |>
+  rownames_to_column("cell_type1") |>
+  pivot_longer(-cell_type1, values_to = "cosine_similarity", names_to = "cell_type2") |> 
+  mutate(cohort = snakemake@wildcards$modality,
+         seed = snakemake@wildcards$s) |>
+  write_tsv(snakemake@output$tsv)
 
 
