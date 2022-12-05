@@ -8,10 +8,8 @@ suppressPackageStartupMessages({
 })
 source("pipeline/whatsthatcell-helpers.R")
 set.seed(1)
-#save.image('debug-rem-cellType.Rdata')
-cell_type_to_rem <- snakemake@wildcards$rem_cell_type
-markers <- read_yaml(snakemake@input$markers)
 
+markers <- read_yaml(snakemake@input$markers)
 if(grepl('entropy', snakemake@wildcards$strat)){
   criterion <- 'entropy'
 }else{
@@ -20,20 +18,27 @@ if(grepl('entropy', snakemake@wildcards$strat)){
 
 # Create marker file with only markers for missing cell type
 missing_cell_type_markers <- markers
-marker_index_rem <- which(names(markers$cell_types) == cell_type_to_rem)
+
+if(is.null(snakemake@params$rem_cell_type_list)){
+  cell_type_to_rem <- snakemake@wildcards$rem_cell_type
+}else{
+  cell_type_to_rem <- snakemake@params$rem_cell_type_list
+}
+
+marker_index_rem <- which(names(markers$cell_types) %in% cell_type_to_rem)
 missing_cell_type_markers$cell_types <- markers$cell_types[marker_index_rem]
 
 sce <- readRDS(snakemake@input$sce)
 
 # Create PCA embedding and filtered expression
 features <- create_features(sce)
-#save.image(paste0('debug-cell-type-rem-', snakemake@wildcards$rem_cell_type, '-', snakemake@wildcards$initial, '-', snakemake@wildcards$strat, '.Rdata'))
 
 ### REMOVED CELL TYPE #####
 # Create initial training set with removed cell type
 selected_cells_rem_cell_type <- get_training_type_rem(features$expression, 
                                                       snakemake@wildcards$initial, 
                                                       markers,
+                                                      cell_type_to_rem,
                                                       needed_cells = as.integer(snakemake@wildcards$num))
 
 print(dim(selected_cells_rem_cell_type))
@@ -45,9 +50,7 @@ missing_cell_type_uncertainty <- rem_cell_type_AL_wrapper(missing_cell_type_PCA,
                                                           snakemake@wildcards$AL_alg,
                                                           snakemake@wildcards$strat,
                                                           rand = 0,
-                                                          criterion = criterion,
-                                                          iter = 1,
-                                                          num_cells = 10) |>
+                                                          criterion = criterion) |>
   bind_rows() |> 
   as_tibble() |> 
   mutate(comp = "missing cell types",
@@ -94,7 +97,7 @@ uncertainties <- bind_rows(
   mutate(params = paste0("AL_alg-", snakemake@wildcards$AL_alg, "-strat-",
                          snakemake@wildcards$strat, "-init-", 
                          snakemake@wildcards$initial, "-rem_celltype-",
-                         cell_type_to_rem, "-seed-", snakemake@wildcards$s))
+                         paste0(cell_type_to_rem, collapse = "\n"), "-seed-", snakemake@wildcards$s))
 
 
 write_tsv(uncertainties, snakemake@output$tsv)

@@ -351,7 +351,7 @@ rem_cell_type_AL_wrapper <- function(df, AL_alg, strat, rand, criterion, iter = 
     if(criterion == 'entropy'){
       num_cell_types <- unique(na.omit(df$cell_type)) |> 
         length()
-      AL$criterion_table <- AL$criterion_table$criterion_val / log(num_cell_types, 2)
+      AL$criterion_table$criterion_val <- AL$criterion_table$criterion_val / log(num_cell_types, 2)
     }
     entropies[[length(entropies) + 1]] <- AL$criterion_table
     
@@ -365,7 +365,7 @@ rem_cell_type_AL_wrapper <- function(df, AL_alg, strat, rand, criterion, iter = 
   entropies
 }
 
-get_training_type_rem <- function(df, initial, markers, needed_cells = 20){
+get_training_type_rem <- function(df, initial, markers, cell_type_to_rem, needed_cells = 20){
   selected_cells <- 0
   discarded_cells <- c()
   
@@ -383,12 +383,12 @@ get_training_type_rem <- function(df, initial, markers, needed_cells = 20){
       df <- cell_ranking_wrapper(df, 
                                  markers, 
                                  left_to_rank_num) |> 
-        filter(cell_type != cell_type_to_rem  | is.na(cell_type))
+        filter(!(cell_type %in% cell_type_to_rem)  | is.na(cell_type))
     }else if(initial == "random"){
       random_cell_idx <- sample(1:nrow(df), left_to_rank_num)
       df$cell_type[random_cell_idx] <- df$gt_cell_type[random_cell_idx]
       
-      df <- filter(df, cell_type != cell_type_to_rem  | is.na(cell_type))
+      df <- filter(df, !(cell_type %in% cell_type_to_rem)  | is.na(cell_type))
     }
     
     # Save selected cells minus cells to remove
