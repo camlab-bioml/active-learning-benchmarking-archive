@@ -1,0 +1,132 @@
+---
+title: "imbalance evaluation"
+output: html_document
+date: "2022-11-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
+suppressPackageStartupMessages({
+  library(tidyverse)
+})
+```
+
+
+```{r message=FALSE}
+sc_acc <- read_tsv("output/v6/imbalance/acc/imbalance-acc-scRNASeq.tsv")
+sn_acc <- read_tsv("output/v6/imbalance/acc/imbalance-acc-snRNASeq.tsv")
+cy_acc <- read_tsv("output/v6/imbalance/acc/imbalance-acc-CyTOF.tsv")
+
+plot_imbalance <- function(df, sel_al, init_sel){
+  title <- paste0(", AL: ", sel_al, ", initial selection: ", init_sel)
+  df |> 
+    filter(.metric == "bal_accuracy") |> 
+    mutate(similarity = factor(similarity,
+                               levels = c("balanced-different", "imbalanced-different",
+                                          "balanced-similar", "imbalanced-similar"))) |> 
+    filter(al == sel_al | is.na(al)) |> 
+    filter(init == init_sel | is.na(init)) |> 
+    ggplot(aes(x = strat, y = .estimate, fill = similarity)) +
+    geom_boxplot() +
+    labs(title = title) +
+    facet_grid(modality ~ method) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          legend.position = "bottom")
+}
+
+imbalance_acc_increase <- function(df, sel_al, init_sel, mod){
+  title <- paste0("Modality: ", mod, ", AL: ", sel_al, ", initial selection: ", init_sel)
+  
+  plot_df <- df |> 
+    pivot_wider(names_from = "similarity", values_from = ".estimate") |> 
+    mutate(similar = (`imbalanced-similar` - `balanced-similar`) / `balanced-similar`,
+           different =  (`imbalanced-different` - `balanced-different`) / `balanced-different`) |> 
+    filter(!is.na(similar)) |> 
+    filter(!is.na(different)) |> 
+    pivot_longer(c(similar, different), names_to = "comp", values_to = "diff")
+
+  p1 <- plot_df |> 
+    ggplot(aes(x = comp, y = diff, fill = strat)) +
+    geom_boxplot() +
+    geom_hline(yintercept = 0) +
+    labs(title = title, 
+      y = "Change in accuracy\n(imbalanced - balanced) / balanced") +
+    facet_grid( ~ method) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  
+  p1
+}
+```
+
+
+
+# Basic accuracy
+```{r fig.width=10, fig.height=6}
+full_acc <- bind_rows(sc_acc, sn_acc, cy_acc)
+lapply(c("rf", "multinom"), function(al){
+  lapply(c("random", "ranking"), function(init){
+    plot_imbalance(full_acc, al, init)
+  })
+})
+
+lapply(c("rf", "multinom"), function(al){
+  lapply(c("random", "ranking"), function(init){
+    plot_imbalance(full_acc, al, init)
+  })
+})
+
+lapply(c("rf", "multinom"), function(al){
+  lapply(c("random", "ranking"), function(init){
+    plot_imbalance(full_acc, al, init)
+  })
+})
+```
+
+
+
+# Increase in accuracy
+```{r fig.width=7, fig.height=3}
+for(sel_al in c("rf", "multinom")){
+  for(sel_init in c("random", "ranking")){
+    df <- sc_acc |> 
+      dplyr::filter(al == sel_al | is.na(al)) |> 
+      dplyr::filter(init == sel_init | is.na(init)) |> 
+      dplyr::filter(.metric == "bal_accuracy")
+    
+    p <- imbalance_acc_increase(df, sel_al, sel_init, "scRNASeq")
+    print(p)
+  }
+}
+
+
+for(sel_al in c("rf", "multinom")){
+  for(sel_init in c("random", "ranking")){
+    print(sel_al)
+    print(sel_init)
+    df <- sn_acc |>
+      dplyr::filter(al == sel_al | is.na(al)) |>
+      dplyr::filter(init == sel_init | is.na(init)) |>
+      dplyr::filter(.metric == "bal_accuracy")
+
+    p <- imbalance_acc_increase(df, sel_al, sel_init, "snRNASeq")
+    print(p)
+  }
+}
+
+for(sel_al in c("rf", "multinom")){
+  for(sel_init in c("random", "ranking")){
+    df <- cy_acc |> 
+      dplyr::filter(al == sel_al | is.na(al)) |> 
+      dplyr::filter(init == sel_init | is.na(init)) |> 
+      dplyr::filter(.metric == "bal_accuracy")
+    
+    p <- imbalance_acc_increase(df, sel_al, sel_init, "CyTOF")
+    print(p)
+  }
+}
+```
+
+
