@@ -1,0 +1,71 @@
+---
+title: "DoubletFinder"
+output: html_document
+date: "2022-12-08"
+params:
+  sce: "data/scRNASeq/scRNASeq-full.rds"
+  method: "10x Chromium (v2) A"
+  res: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages({
+  library(DoubletFinder)
+  library(SingleCellExperiment)
+  library(Seurat)
+})
+```
+
+```{r}
+sce <- readRDS(params$sce)
+sce <- sce[,colData(sce)$Method == params$method]
+cts_mat <- as.matrix(assays(sce)$counts)
+
+seu <- CreateSeuratObject(cts_mat,
+                          meta.data = tibble(cell_type = sce$CellType))
+seu <- SCTransform(seu)
+seu <- RunPCA(seu)
+seu <- RunUMAP(seu, dims = 1:10)
+```
+
+
+```{r}
+sweep.res <- paramSweep_v3(seu, PCs = 1:10, sct = TRUE)
+sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+bcmvn <- find.pK(sweep.stats)
+
+ggplot(bcmvn, aes(x = pK, y = BCmetric, group = 1)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+```{r}
+homotypic.prop <- modelHomotypic(seu@meta.data$cell_type)
+doublet_rate <- 0.04
+inferred_pK <- bcmvn %>% 
+  filter(BCmetric == max(BCmetric)) %>% 
+  pull(pK) %>% as.vector() %>% 
+  as.numeric()
+
+nExp_poi <- round(doublet_rate*nrow(seu@meta.data))
+nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+
+
+seu <- doubletFinder_v3(seu, PCs = 1:10, pN = 0.25, pK = inferred_pK, 
+                        nExp = nExp_poi, reuse.pANN = 'FALSE', sct = TRUE)
+
+seu <- doubletFinder_v3(seu, PCs = 1:10, pN = 0.25, pK = inferred_pK, 
+                        nExp = nExp_poi.adj, reuse.pANN = FALSE, sct = TRUE)
+
+
+df <- select(seu@meta.data, starts_with(c("pANN", "DF."))) %>%
+  rownames_to_column("cell_id") %>% 
+  mutate(method = params$method) %>%
+  mutate(params = paste0('pN-0.25_pK-', inferred_pK, '_expectedDoublets-', nExp_poi, '_expectedDoubletsAdj-', nExp_poi.adj))
+
+write_tsv(df, params$res)
+```
