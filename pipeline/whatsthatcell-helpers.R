@@ -644,4 +644,44 @@ whatsthatcell_theme <- function(){
 }
 
 
-
+plot_top_markers <- function(sce, clusters, n=20) {
+  fm <- findMarkers(sce, clusters)
+  
+  top_markers_per_cluster <- lapply(fm, function(f) {
+    rownames(head(f, n = n))
+  })
+  
+  top_markers <- unique(unlist(top_markers_per_cluster))
+  
+  expr_mat <- sce[top_markers,] %>% 
+    logcounts() %>% 
+    t() %>% 
+    scale() 
+  
+  thresh <- 2
+  expr_mat[expr_mat > thresh] <- thresh
+  expr_mat[expr_mat < -thresh] <- -thresh
+  
+  dfc <- expr_mat %>% 
+    as.data.frame() %>% 
+    as_tibble() %>% 
+    mutate(cluster = clusters) %>% 
+    gather(gene, expression, -cluster)
+  
+  dfc2 <- group_by(dfc, cluster, gene) %>% 
+    summarise(mean_expression = mean(expression), 
+              pct_expressing = 100 * mean(expression > 0)) %>% 
+    ungroup()
+  
+  
+  dfc2$gene <- sub("(.*?)[^-]-", "", dfc2$gene)
+  
+  ggplot(dfc2, aes(y = cluster, x = gene)) +
+    geom_point(aes(colour = mean_expression, size = pct_expressing)) +
+    scale_colour_viridis_c(name = "Expression") +
+    scale_size(name = "%  cells expressing") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          legend.position = "top") +
+    labs(x = "Gene", y = "Cluster")
+}
