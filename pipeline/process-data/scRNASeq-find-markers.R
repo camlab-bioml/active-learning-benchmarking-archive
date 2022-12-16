@@ -39,18 +39,29 @@ dfc2 <- group_by(dfc, cluster, gene) %>%
             pct_expressing = 100 * mean(expression > 0)) %>% 
   ungroup()
 
+
+hm_mat <- dfc2 |> 
+  select(-pct_expressing) |> 
+  pivot_wider(names_from = "gene", values_from = "mean_expression") |> 
+  as.data.frame() |> 
+  column_to_rownames("cluster") |> 
+  as.matrix()
+  
+hm <- Heatmap(hm_mat, name = "lfc")
+hm <- draw(hm)
+
 pdf(snakemake@output$heatmap, height = 10, width = 16)
-  dfc2 |> 
-    select(-pct_expressing) |> 
-    pivot_wider(names_from = "gene", values_from = "mean_expression") |> 
-    as.data.frame() |> 
-    column_to_rownames("cluster") |> 
-    as.matrix() |> 
-    Heatmap(name = "lfc")
+  hm
 dev.off()
 
+cell_line_order <- rownames(hm_mat)[row_order(hm)]
+gene_order <- colnames(hm_mat)[column_order(hm)]
+
 pdf(snakemake@output$lfc_point, height = 10, width = 16)
-  ggplot(dfc2, aes(y = cluster, x = gene)) +
+  dfc2 |> 
+    mutate(cluster = factor(cluster, levels = cell_line_order),
+           gene = factor(gene, levels = gene_order)) |> 
+  ggplot(aes(y = cluster, x = gene)) +
     geom_point(aes(colour = mean_expression, size = pct_expressing)) +
     scale_colour_viridis_c(name = "Expression") +
     scale_size(name = "%  cells expressing") +
