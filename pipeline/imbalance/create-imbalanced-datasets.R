@@ -37,6 +37,7 @@ small_sce <- sce[, sce$CellType == minority_ct]
 small_sce <- small_sce[, sample(1:ncol(small_sce), minority_num)]
 
 comb_sce <- cbind(big_sce, small_sce)
+comb_sce <- comb_sce[, sample(1:ncol(comb_sce), ncol(comb_sce))]
 
 # Create test set
 rem_sce <- sce[, !(colnames(sce) %in% colnames(comb_sce))]

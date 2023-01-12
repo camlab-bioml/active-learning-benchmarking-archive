@@ -29,7 +29,7 @@ acc <- lapply(f, function(x){
   df
 }) |> bind_rows()
 
-sel_meth_cols <- hue_pal()(8)
+sel_meth_cols <- hue_pal()(9)
 names(sel_meth_cols) <- unique(acc$selection_procedure)
 
 full_acc_plot_wrapper(acc, "rf", "ranking", "RF - initial selection: ranked")

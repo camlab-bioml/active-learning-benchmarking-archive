@@ -39,10 +39,17 @@ pred_lab <- lapply(snakemake@input[['pred_lab_files']], function(x){
 }) |> 
   bind_rows()
 
-seurat <- lapply(snakemake@input[['seurat_files']], read_tsv) |> 
+marker_seurat <- lapply(snakemake@input[['marker_seurat_files']], read_tsv) |> 
   bind_rows() |> 
   mutate(cell_selection = "baseline",
          pred_lab_alg = "NA")
+
+noMarker_seurat <- lapply(snakemake@input[['NoMarker_seurat_files']], read_tsv) |> 
+  bind_rows() |> 
+  mutate(cell_selection = "baseline",
+         pred_lab_alg = "NA")
+
+seurat <- bind_rows(marker_seurat, noMarker_seurat)
 
 random <- lapply(snakemake@input[['random_files']], read_tsv) |> 
   bind_rows() |> 

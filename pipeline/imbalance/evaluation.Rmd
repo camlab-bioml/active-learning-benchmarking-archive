@@ -2,6 +2,10 @@
 title: "imbalance evaluation"
 output: html_document
 date: "2022-11-21"
+params:
+  sc_acc: ""
+  sn_acc: ""
+  cy_acc: ""
 ---
 
 ```{r setup, include=FALSE}
@@ -14,9 +18,9 @@ suppressPackageStartupMessages({
 
 
 ```{r message=FALSE}
-sc_acc <- read_tsv("output/v6/imbalance/acc/imbalance-acc-scRNASeq.tsv")
-sn_acc <- read_tsv("output/v6/imbalance/acc/imbalance-acc-snRNASeq.tsv")
-cy_acc <- read_tsv("output/v6/imbalance/acc/imbalance-acc-CyTOF.tsv")
+sc_acc <- read_tsv(params$sc_acc)
+sn_acc <- read_tsv(params$sn_acc)
+cy_acc <- read_tsv(params$cy_acc)
 
 plot_imbalance <- function(df, sel_al, init_sel){
   title <- paste0(", AL: ", sel_al, ", initial selection: ", init_sel)

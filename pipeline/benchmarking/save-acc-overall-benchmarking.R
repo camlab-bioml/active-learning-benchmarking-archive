@@ -22,7 +22,6 @@ sce_gt <- tibble(cell_id = colnames(sce),
 predictions <- lapply(snakemake@input[['predictions']], read_tsv) |>
   bind_rows()
 
-save.image(paste("debug-acc-", snakemake@wildcards[['modality']], '-1.Rdata'))
 predictions <- predictions |> 
   left_join(sce_gt) %>% 
   separate(prediction_params, c('m1', 'm2', 'rm_knn', 'knn', 
@@ -37,7 +36,6 @@ predictions <- predictions |>
   separate(selection_procedure, c('selection_procedure', 'rm_alg', 'AL_alg'), sep = '-') |>
   select(-starts_with('rm'))
 
-save.image(paste("debug-acc-", snakemake@wildcards[['modality']], '-2.Rdata'))
 acc <- predictions %>% 
   filter(predicted_cell_type != "unassigned") %>%
   group_by(method, knn, res, cell_num, rand, corrupted, initial, seed, selection_procedure, AL_alg) %>% 
