@@ -502,7 +502,8 @@ al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NUL
     geom_boxplot() +
     scale_fill_manual(values = sel_meth_cols) +
     whatsthatcell_theme() +
-    facet_grid(.metric ~ cohort) +
+    facet_wrap(~cohort, scales = "free_y", nrow = 1) +
+    labs(title = metric) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
   
   if(!is.null(n_cells)){
@@ -513,17 +514,22 @@ al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NUL
             axis.title.x = element_blank(),
             axis.ticks.x = element_blank())
   }
+  
+  p
 }
 
 full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
-  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel)
-  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel)
+  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel) +
+    theme(legend.position = "none")
+  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel) +
+    theme(legend.position = "none")
   kap <- al_selection(acc, "kap", AL_alg, initial_sel)
-  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel)
-  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, n_cells = "Number of cells")
+  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel) +
+    theme(legend.position = "none")
+  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, n_cells = "Number of cells") +
+    theme(legend.position = "none")
   
   (bal_acc / f1 / kap / mcc / sens) +
-    plot_layout(guides = "collect") +
     plot_annotation(title = title)
 }
 
