@@ -49,7 +49,7 @@ rf_or_lr <- function(acc, metric, initial_sel){
     filter(rand == 0 | is.na(rand)) |> 
     filter(.metric == metric) |> 
     filter(initial == initial_sel | is.na(initial)) |> 
-    filter(selection_procedure != "random" & selection_procedure != "NoMarkerSeurat-clustering" & selection_procedure != "MarkerSeurat-clustering")
+    filter(selection_procedure != "random" & !grepl("Seurat_clustering", selection_procedure))
   
   cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
   method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
@@ -87,7 +87,7 @@ random_or_ranked <- function(acc, metric, AL_alg){
     filter(rand == 0 | is.na(rand)) |> 
     filter(.metric == metric) |> 
     filter(AL_alg == AL_alg | is.na(AL_alg)) |> 
-    filter(selection_procedure != "random" & selection_procedure != "NoMarkerSeurat-clustering" & selection_procedure != "MarkerSeurat-clustering")
+    filter(selection_procedure != "random" & !grepl("Seurat_clustering", selection_procedure))
   
   cross_cohort_ranks <- get_ranked_mean_estimate_by_cohort(sel_acc)
   method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
