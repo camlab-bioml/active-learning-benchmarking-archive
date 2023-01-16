@@ -519,20 +519,19 @@ al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NUL
 }
 
 full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
-  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel) +
-    theme(legend.position = "none")
-  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel) +
-    theme(legend.position = "none")
+  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel)
+  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel)
   kap <- al_selection(acc, "kap", AL_alg, initial_sel)
-  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel) +
-    theme(legend.position = "none")
-  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, n_cells = "Number of cells") +
-    theme(legend.position = "none")
+  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel) 
+  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, n_cells = "Number of cells")
   
-  (bal_acc / f1 / kap / mcc / sens) +
+  ((bal_acc + theme(legend.position = "none")) / 
+  (f1 + theme(legend.position = "none")) / 
+  (kap + theme(legend.position = "none")) /
+  (mcc + theme(legend.position = "none")) / 
+  (sens + theme(legend.position = "bottom"))) +
     plot_annotation(title = title)
 }
-
 
 ### [ PLOTTING ] ####
 createHeatmap <- function(sce,
@@ -596,15 +595,16 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
            "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d", '#FD4FBD')
   
   scRNASeq_colours <- c(
-    "B cell" = pal[2],
-    "Cytotoxic T cell" = pal[3],
-    "CD4+ T cell" = pal[12],
-    "CD16+ monocyte" = pal[4],
-    "Dendritic cell" = pal[5],
-    "CD14+ monocyte" = pal[8], 
-    "Megakaryocyte" = pal[9],
-    "Natural killer cell" = pal[10],
-    "Plasmacytoid dendritic cell" = pal[6]
+    "CAL51" = pal[2],
+    "BT483" = pal[3],
+    "MCF7" = pal[12],
+    "JIMT1" = pal[4],
+    "AU565" = pal[5],
+    "HCC1937" = pal[8], 
+    "HDQP1" = pal[9],
+    "CAL851" = pal[13],
+    "CAMA1" = pal[10],
+    "MDAMB468" = pal[6]
   )
   snRNASeq_colours <- c(
     "Fibroblast" = pal[1],
