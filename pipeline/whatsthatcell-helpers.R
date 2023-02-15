@@ -42,7 +42,7 @@ select_initial_cells <- function(df_expression,
     select(X1, max_cell_type, max_mean_expression) |> 
     arrange(-max_mean_expression)
     
-  cell_types_to_sample <- recycle(cell_types, number_cells)
+  cell_types_to_sample <- recycle(sample(cell_types), number_cells)
   
   lapply(cell_types_to_sample, function(i){
     cell <- filter(selected_cells, max_cell_type == i) |> 
@@ -380,9 +380,7 @@ get_training_type_rem <- function(df, initial, markers, cell_type_to_rem, needed
     left_to_rank_num <- needed_cells - selected_cells
     
     if(initial == "ranking"){
-      df <- cell_ranking_wrapper(df, 
-                                 markers, 
-                                 left_to_rank_num) |> 
+      df <- cell_ranking_wrapper(df, markers, left_to_rank_num) |>
         filter(!(cell_type %in% cell_type_to_rem)  | is.na(cell_type))
     }else if(initial == "random"){
       random_cell_idx <- sample(1:nrow(df), left_to_rank_num)
@@ -592,7 +590,9 @@ create_entropy_boxplot <- function(vals, y_lab, colors){
 
 cell_type_colours <- function(modality, include_unassigned = TRUE) {
   pal <- c("#8B5B42", "#AF4EA9", "#FFB60A", "#79E200", "#0024DD", "#6CC1FF",
-           "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d", '#FD4FBD')
+           "#0496FF", "#1DA05B", "#E11E00", "#A78882", "#BD93D8", "#fff53d", 
+           '#FD4FBD', '#9A031E', '#E36414', '#6FBAAC', '#0F4C5C', '#4D76B8',
+           '#98473E', '#97DFFC')
   
   scRNASeq_colours <- c(
     "CAL51" = pal[2],
@@ -618,16 +618,38 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     "Endocrine" = pal[8],
     "Acinar" = pal[6]
   )
+  # CyTOF_colours <- c(
+  #   "B-cell Frac A-C (pro-B cells)" = pal[2],
+  #   "IgD- IgMpos B cells" = pal[11],
+  #   "IgM- IgD- B-cells" = pal[13],
+  #   "CMP" = pal[3],
+  #   'GMP' = pal[4],
+  #   "CLP" = pal[8],
+  #   "MPP" = pal[9]
+  # )
+
   CyTOF_colours <- c(
-    "B-cell Frac A-C (pro-B cells)" = pal[2],
+    "Eosinophils" = pal[9],
+    "pDCs" = pal[20],
+    "NKT cells" = pal[15],
+    "Macrophages" = pal[17],
+    "Classical Monocytes" = pal[4],
+    "Intermediate Monocytes" = pal[16],
+    "Non-Classical Monocytes" = pal[8],
+    "MEP" = pal[5],
+    "CMP" = pal[6],
+    "GMP" = pal[7],
+    "MPP" = pal[18],
+    "Basophils" = pal[19],
+    "NK cells" = pal[10],
+    "CD4 T cells" = pal[12],
+    "CD8 T cells" = pal[3],
+    "IgDpos IgMpos B cells" = pal[14],
     "IgD- IgMpos B cells" = pal[11],
     "IgM- IgD- B-cells" = pal[13],
-    "CMP" = pal[3],
-    'GMP' = pal[4],
-    "CLP" = pal[8],
-    "MPP" = pal[9]
+    "B-cell Frac A-C (pro-B cells)" = pal[2]
   )
-  
+
   if(include_unassigned){
     scRNASeq_colours <- c(scRNASeq_colours, c('unassigned' = "grey60"))
     snRNASeq_colours <- c(snRNASeq_colours, c('unassigned' = "grey60"))
