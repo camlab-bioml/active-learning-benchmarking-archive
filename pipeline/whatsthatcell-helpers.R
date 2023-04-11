@@ -408,7 +408,7 @@ get_training_type_rem <- function(df, initial, markers, cell_type_to_rem, needed
 get_training_type_kept <- function(df, cell_type_to_rem, initial, markers,
                                    selected_cells_df){
   # Find the set of cells of the type that were removed above with the highest marker expression
-  missing_df_expression <- filter(df, gt_cell_type == cell_type_to_rem)
+  missing_df_expression <- filter(df, gt_cell_type %in% cell_type_to_rem)
 
   if(nrow(missing_df_expression) < 3){
     ranked_cell_num <- nrow(missing_df_expression)
@@ -618,15 +618,6 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     "Endocrine" = pal[8],
     "Acinar" = pal[6]
   )
-  # CyTOF_colours <- c(
-  #   "B-cell Frac A-C (pro-B cells)" = pal[2],
-  #   "IgD- IgMpos B cells" = pal[11],
-  #   "IgM- IgD- B-cells" = pal[13],
-  #   "CMP" = pal[3],
-  #   'GMP' = pal[4],
-  #   "CLP" = pal[8],
-  #   "MPP" = pal[9]
-  # )
 
   CyTOF_colours <- c(
     "Eosinophils" = pal[9],
@@ -665,6 +656,9 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
   }
 }
 
+al_colours <- function(){
+  c("LR" = "#DA94D4", "RF" = "#7EA3CC")
+}
 
 whatsthatcell_theme <- function(){
   theme_bw() +
