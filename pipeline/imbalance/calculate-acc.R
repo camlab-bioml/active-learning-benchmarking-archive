@@ -3,7 +3,6 @@ suppressPackageStartupMessages({
   library(tidyverse)
 })
 source("pipeline/whatsthatcell-helpers.R")
-#save.image('debug-acc.Rdata')
 
 predictions <- lapply(snakemake@input$predictions, read_tsv) |>
   bind_rows() |> 

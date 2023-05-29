@@ -7,7 +7,6 @@ suppressPackageStartupMessages({
 set.seed(as.integer(snakemake@wildcards$s))
 
 sce <- readRDS(snakemake@input[['sce']])
-save.image('debug-imbalance.Rdata')
 
 if(snakemake@wildcards[['modality']] == "snRNASeq"){
   colnames(sce) <- gsub("-", "_", colnames(sce))
