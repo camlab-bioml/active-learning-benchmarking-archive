@@ -14,19 +14,24 @@ import joblib
 expression = pd.read_csv(snakemake.input['train'], sep = "\t", header = 0)
 annotation = pd.read_csv(str(snakemake.input['annotation']), sep = '\t', header = 0)
 
-expression = pd.merge(expression, annotation, on = 'cell_id')
+if 'cell_selection' in dict(snakemake.wildcards).keys():
+    expression = pd.merge(expression, annotation, on = 'cell_id')
+    X_train = expression.drop(['cell_type_y', 'entropy', 'labeling', 'cell_type_x', 'cell_id', 'corrupted_cell_type', 'iteration', 'method', 'cell_num', 'params'], axis = 1)
+    y_train = expression['cell_type_y']
+else:
+    expression = pd.merge(expression, annotation, on = 'cell_id')
 
-if snakemake.wildcards['selection_procedure'] == 'Active-Learning_entropy' or snakemake.wildcards['selection_procedure'] == 'Active-Learning_maxp':
-    expression = expression.drop(['iteration', 'cell_num', 'corrupted_cell_type'], axis = 1)
+    if snakemake.wildcards['selection_procedure'] == 'Active-Learning_entropy' or snakemake.wildcards['selection_procedure'] == 'Active-Learning_maxp':
+        expression = expression.drop(['iteration', 'cell_num', 'corrupted_cell_type'], axis = 1)
 
-if snakemake.wildcards['selection_procedure'] == 'random':
-    expression = expression.drop(['set','params'], axis = 1)
+    if snakemake.wildcards['selection_procedure'] == 'random':
+        expression = expression.drop(['set','params'], axis = 1)
 
-if snakemake.wildcards['selection_procedure'] == 'Seurat-clustering':
-    expression = expression.drop(['params'], axis = 1)
+    if snakemake.wildcards['selection_procedure'] == 'NoMarkerSeurat-clustering' or snakemake.wildcards['selection_procedure'] == 'MarkerSeurat-clustering':
+        expression = expression.drop(['params'], axis = 1)
 
-X_train = expression.drop(['cell_type_y', 'method', 'cell_type_x', 'cell_id'], axis = 1)
-y_train = expression['cell_type_y']
+    X_train = expression.drop(['cell_type_y', 'method', 'cell_type_x', 'cell_id'], axis = 1)
+    y_train = expression['cell_type_y']
 
 # ## ML Pipeline start
 RSEED = 42

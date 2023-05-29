@@ -43,6 +43,7 @@ if(snakemake@wildcards[['initial']] == 'ranking'){
 }else if(snakemake@wildcards[['initial']] == 'random'){
   random_cell_idx <- sample(1:nrow(df_expression), 20)
   df_expression$cell_type[random_cell_idx] <- df_expression$gt_cell_type[random_cell_idx]
+  df_expression$iteration[random_cell_idx] <- 0
 }
 
 if(!is.null(snakemake@wildcards[['similarity']])){
@@ -81,6 +82,8 @@ df_PCA <- bind_cols(
          gt_cell_type = df_expression$gt_cell_type,
          iteration = df_expression$iteration)
 )
+
+table(df_PCA$cell_type)
 
 for(i in 1:max_AL_iterations){
   AL <- active_learning_wrapper(select(df_PCA, -gt_cell_type, -iteration), 

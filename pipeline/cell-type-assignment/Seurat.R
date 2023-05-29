@@ -9,7 +9,6 @@ sce <- readRDS(snakemake@input[['training_rds']])
 markers <- read_yaml(snakemake@input[['markers']])$cell_types
 unique_markers <- unlist(markers) %>% unique()
 
-
 ### [PROCESS DATA] ###
 if(snakemake@params[['mod']] == 'scRNASeq' | snakemake@params[['mod']] == 'snRNASeq'){
   # Normalize scRNASeq data
@@ -100,40 +99,6 @@ assignments <- left_join(clusters, cluster_assignments) %>%
 assignments %>% 
   select(cell_id, predicted_cell_type, prediction_params, cluster, modality) %>% 
   write_tsv(snakemake@output[['assignments']])
-
-### Create diagnostic plots
-# Positive markers
-# lapply(1:length(markers), function(x){
-#   cell_types <- names(markers[x]) %>% 
-#     gsub(" ", "-", .)
-  
-#   out_path <- snakemake@params[['positive_markers_diagnostic']] %>% 
-#     gsub("\\[", "{", .) %>% 
-#     gsub("\\]", "}", .)
-#   out <- glue(out_path)
-  
-#   pdf(out, width = 12)
-#   print(FeaturePlot(seu, features = markers[[x]]$positive))
-#   dev.off()
-# })
-
-# # Negative markers
-# lapply(1:length(markers), function(x){
-#   cell_types <- names(markers[x]) %>% 
-#     gsub(" ", "-", .)
-  
-#   out_path <- snakemake@params[['negative_markers_diagnostic']] %>% 
-#     gsub("\\[", "{", .) %>% 
-#     gsub("\\]", "}", .)
-#   out <- glue(out_path)
-  
-#   if(!is.null(markers[[x]]$negative)){
-#     pdf(out, width = 12)
-#     print(FeaturePlot(seu, features = markers[[x]]$negative))
-#     dev.off()
-#   }
-# })
-
 
 ### Cell type umap
 Idents(seu) <- assignments$predicted_cell_type

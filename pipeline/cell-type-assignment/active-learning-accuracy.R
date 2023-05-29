@@ -24,6 +24,7 @@ if(grepl("maxp", snakemake@wildcards$strat)){
 df_expression <- load_scs(sce)
 df_expression$cell_type <- NA
 df_expression$gt_cell_type <- sce$CellType
+df_expression$non_corrupted_gt_cell_type <- sce$CellType
 df_expression$iteration <- NA
 df_expression$corrupted <- NA
 
@@ -63,6 +64,7 @@ df_PCA <- bind_cols(
   df_PCA[,1:min(20, ncol(df_PCA))], 
   tibble(cell_type = df_expression$cell_type,
          gt_cell_type = df_expression$gt_cell_type,
+         non_corrupted_gt_cell_type = df_expression$non_corrupted_gt_cell_type,
          iteration = df_expression$iteration)
 )
 
@@ -74,24 +76,26 @@ f1_scores <- tibble(
 )
 
 for(i in 1:iters){
+  print(i)
   annotated_cells <- df_PCA %>% 
     filter(!is.na(cell_type)) %>% 
     filter(cell_type != "Skipped", cell_type != "Unclear")
+  print(dim(annotated_cells))
   
   left_cells <- df_PCA %>% 
     filter(is.na(cell_type))
   
-  ModelFit <- fit_AL_classifier(select(annotated_cells, -gt_cell_type, -iteration),
+  ModelFit <- fit_AL_classifier(select(annotated_cells, -gt_cell_type, -iteration, -non_corrupted_gt_cell_type),
                                 snakemake@wildcards$AL_alg)
   
   ### Calculate F1-score
   predicted_scores <- predict(ModelFit, 
-                              select(left_cells, -X1, -cell_type, -gt_cell_type, -iteration),
+                              select(left_cells, -X1, -cell_type, -gt_cell_type, -iteration, -non_corrupted_gt_cell_type),
                               type = "raw")
   
   preds <- tibble(
     cell_id = left_cells$X1,
-    annotated_cell_type = left_cells$gt_cell_type,
+    annotated_cell_type = left_cells$non_corrupted_gt_cell_type,
     predicted_cell_type = predicted_scores
   )
   
@@ -106,7 +110,7 @@ for(i in 1:iters){
   
   # Continue AL - predict probabilities
   predicted_scores <- predict(ModelFit, 
-                              select(left_cells, -X1, -cell_type, -gt_cell_type, -iteration),
+                              select(left_cells, -X1, -cell_type, -gt_cell_type, -iteration, -non_corrupted_gt_cell_type),
                               type = "prob")
   
   # Get next set of cells

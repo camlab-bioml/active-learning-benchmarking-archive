@@ -66,6 +66,10 @@ if(!is.null(snakemake@wildcards[['similarity']])){
   clustering_prediction$similarity <- paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']])
 }
 
+if(!is.null(snakemake@wildcards$cell_selection)){
+  clustering_prediction$pred_cells <- snakemake@wildcards$cell_selection
+}
+
 
 write_tsv(clustering_prediction, snakemake@output[['cluster_predictions']])
 
@@ -109,6 +113,10 @@ if(is.null(snakemake@wildcards[['cell_selection']])){
 
 if(!is.null(snakemake@wildcards[['similarity']])){
   sc_prediction$similarity <- paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']])
+}
+
+if(!is.null(snakemake@wildcards$cell_selection)){
+  sc_prediction$pred_cells <- snakemake@wildcards$cell_selection
 }
 
 write_tsv(sc_prediction, snakemake@output[['sc_predictions']])

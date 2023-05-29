@@ -49,4 +49,8 @@ if(!is.null(snakemake@wildcards[['similarity']])){
   result$similarity <- paste0(snakemake@wildcards[['bal']], '-', snakemake@wildcards[['similarity']])
 }
 
+if(!is.null(snakemake@wildcards$cell_selection)){
+  result$pred_cells <- snakemake@wildcards$cell_selection
+}
+
 write_tsv(result, snakemake@output[['predictions']])

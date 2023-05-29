@@ -72,4 +72,8 @@ if(is.null(snakemake@wildcards[['cell_selection']])){
   df_output$cell_selection <- snakemake@wildcards[['cell_selection']]
 }
 
+if(!is.null(snakemake@wildcards$cell_selection)){
+  df_output$pred_cells <- snakemake@wildcards$cell_selection
+}
+
 write_tsv(df_output, snakemake@output[['prediction']])
