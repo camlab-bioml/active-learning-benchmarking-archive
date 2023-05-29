@@ -15,6 +15,7 @@ if(snakemake@wildcards[['modality']] == "snRNASeq"){
 }
 
 set.seed(as.integer(snakemake@wildcards[['s']]))
+sce <- sce[, sample(1:ncol(sce))]
 train <- createDataPartition(sce$CellType, p = 0.5)$Resample1
 
 train_sce <- sce[,train]
