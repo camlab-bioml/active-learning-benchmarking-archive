@@ -1,5 +1,6 @@
 suppressPackageStartupMessages({
   library(tidyverse)
+  library(patchwork)
 })
 source("pipeline/whatsthatcell-helpers.R")
 
@@ -8,8 +9,8 @@ maxp_acc <- lapply(snakemake@input$maxp_accs, read_tsv) |>
 entr_acc <- lapply(snakemake@input$entr_accs, read_tsv) |> 
   bind_rows()
 
-pdf(snakemake@output$pdf, width = 12, height = 6)
-  bind_rows(maxp_acc, bind_rows) |> 
+plot_f1 <- function(acc, sel_cohort){
+  filter(acc, cohort == sel_cohort) |> 
     separate(params, c("rm_init", "init", "rm_strat", "strat", "rm_al", "AL", "rm_rand",
                        "rand", "rm_cor", "corr", "rm_s", "seed"), "-") |> 
     select(-starts_with("rm")) |> 
@@ -27,8 +28,20 @@ pdf(snakemake@output$pdf, width = 12, height = 6)
     scale_fill_manual(values = c("#ffa600", "#9763ff")) +
     labs(x = "Training iteration", y = "Mean f1 score", 
          color = "Proportion of\nlabels corrupted",
-         fill = "Proportion of\nlabels corrupted") +
+         fill = "Proportion of\nlabels corrupted",
+         title = sel_cohort) +
     facet_grid(init + AL ~ strat) +
     whatsthatcell_theme()
+}
+
+cytof <- bind_rows(maxp_acc, entr_acc) |>
+  plot_f1("CyTOF")
+scrnaseq <- bind_rows(maxp_acc, entr_acc) |>
+  plot_f1("scRNASeq")
+snrnaseq <- bind_rows(maxp_acc, entr_acc) |>
+  plot_f1("snRNASeq")
+
+pdf(snakemake@output$pdf, width = 11, height = 14)
+  cytof / scrnaseq / snrnaseq + plot_layout(guides = 'collect') + plot_annotation(tag_levels = 'A')
 dev.off()
 
