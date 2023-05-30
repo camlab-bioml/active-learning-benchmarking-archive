@@ -42,16 +42,17 @@ select_initial_cells <- function(df_expression,
     select(X1, max_cell_type, max_mean_expression) |> 
     arrange(-max_mean_expression)
     
-  cell_types_to_sample <- recycle(sample(cell_types), number_cells)
+  cell_types_to_sample <- recycle(sample(cell_types), nrow(selected_cells))
   
   lapply(cell_types_to_sample, function(i){
     cell <- filter(selected_cells, max_cell_type == i) |> 
-      slice_head(n = 1) |> 
-      pull(X1)
+      slice_head(n = 1)
     
-    selected_cells <<- filter(selected_cells, !(X1 %in% cell))
+    selected_cells <<- filter(selected_cells, !(X1 %in% cell$X1))
     cell
-  }) |> unlist()
+  }) |> bind_rows() |> 
+    slice_head(n = number_cells) |> 
+    pull(X1)
 }
 
 calculate_expression_average <- function(expressions) {
@@ -259,7 +260,7 @@ cell_ranking_wrapper <- function(df, markers, number_cells = 20){
   # What index do the selected cells correspond to?
   to_assign_index <- match(ranked_cells, df$X1)
   df$cell_type[to_assign_index] <- df$gt_cell_type[to_assign_index]
-  df$iteration <- 0
+  df$iteration[to_assign_index] <- 0
   
   df
 }
