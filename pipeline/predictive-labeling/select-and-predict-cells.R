@@ -79,6 +79,18 @@ unlabeled_pred$pred_cell_type <- predict(multiNomModelFit, select(unlabeled, -X1
 # Add cell ID
 unlabeled_pred$cell_id <- unlabeled$X1
 
+# Save full prediction table
+bind_rows(
+  mutate(selected_cells, entropy = NA, max_p = NA, labeling = "gt") |> 
+    select(cell_id, entropy, max_p, cell_type, labeling),
+  
+  select(unlabeled_pred, cell_id, entropy, max_p, pred_cell_type) |> 
+    dplyr::rename("cell_type" = "pred_cell_type") |> 
+    mutate(labeling = "pred") |> 
+    select(cell_id, entropy, max_p, cell_type, labeling)
+) |>
+  write_tsv(snakemake@output[['full_pred']])
+
 # Remove probabilities for each cell type
 unlabeled_pred <- select(unlabeled_pred, cell_id, pred_cell_type, entropy, max_p)
 
@@ -127,7 +139,7 @@ maxp_cells <- select(maxp_cells, -selection_strat) %>%
   dplyr::rename("cell_type" = "pred_cell_type")
 highp_cells <- select(high_prob_cells, -selection_strat) %>% 
   dplyr::rename("cell_type" = "pred_cell_type")
-#save.image('debug-pred-lab.Rdata')
+
 if(snakemake@wildcards[['selection_procedure']] == "Active-Learning_entropy" |
    snakemake@wildcards[['selection_procedure']] == "Active-Learning_maxp"){
   
@@ -152,10 +164,10 @@ if(snakemake@wildcards[['selection_procedure']] == "Active-Learning_entropy" |
   maxp_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-maxp-AL_alg-", snakemake@wildcards[['AL_alg']])
   highp_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-99p-AL_alg-", snakemake@wildcards[['AL_alg']])
 
-}else if(snakemake@wildcards[['selection_procedure']] == "Seurat-clustering"){
-  entropy_cells$method <- "Seurat-clustering"
-  maxp_cells$method <- "Seurat-clustering"
-  highp_cells$method <- "Seurat-clustering"
+}else if(grepl("Seurat-clustering", snakemake@wildcards[['selection_procedure']])){
+  entropy_cells$method <- snakemake@wildcards[['selection_procedure']]
+  maxp_cells$method <- snakemake@wildcards[['selection_procedure']]
+  highp_cells$method <- snakemake@wildcards[['selection_procedure']]
 
   entropy_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-maxp-AL_alg-", snakemake@wildcards[['AL_alg']])
   maxp_cells$params <- paste0(unique(selected_cells$params), "-predLabelSelection-entropy-AL_alg-", snakemake@wildcards[['AL_alg']])

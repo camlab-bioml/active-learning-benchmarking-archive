@@ -1,5 +1,6 @@
 # Can predictive labeling find mislabelled cell types?
 library(data.table)
+library(readr)
 library(tibble)
 library(dplyr)
 library(caret)
@@ -8,7 +9,7 @@ library(tidyr)
 source("pipeline/whatsthatcell-helpers.R")
 set.seed(42)
 
-sce <- readRDS("data/snRNASeq/snRNASeq-test-seed-0.rds")
+sce <- readRDS(snakemake@input$sce)
 
 # Create features
 features <- create_features(sce)
@@ -48,8 +49,9 @@ unlabeled_pred$cell_id <- train_features$X1
 unlabeled_pred$corr_cell_type <- train_features$cell_type
 unlabeled_pred$gt_cell_type <- train_features$gt_cell_type
 
-unlabeled_pred$params <- paste0("mod-", snakemake@wildcards$mod,
-                                "-predLabAlg-", snakemake@wildcards[['pred_alg']])
+unlabeled_pred$params <- paste0("mod-", snakemake@wildcards$modality,
+                                "-predLabAlg-", snakemake@wildcards[['pred_alg']],
+                                "-seed-", snakemake@wildcards[['seed']])
 
 write_tsv(unlabeled_pred, snakemake@output$pred)
 
