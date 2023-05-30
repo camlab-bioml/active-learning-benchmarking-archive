@@ -10,10 +10,12 @@ params:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../')
 suppressPackageStartupMessages({
   library(DoubletFinder)
   library(SingleCellExperiment)
   library(Seurat)
+  library(tidyverse)
 })
 ```
 

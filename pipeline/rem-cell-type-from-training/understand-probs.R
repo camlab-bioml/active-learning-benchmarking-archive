@@ -31,13 +31,18 @@ get_AL_probs <- function(df, AL_method){
 }
 
 
-cell_type_to_rem <- snakemake@wildcards$rem_cell_type
+if(is.null(snakemake@params$rem_cell_type_list)){
+  cell_type_to_rem <- snakemake@wildcards$rem_cell_type
+}else{
+  cell_type_to_rem <- snakemake@params$rem_cell_type_list
+}
+
 markers <- read_yaml(snakemake@input$markers)
 
 
 # Create marker file with only markers for missing cell type
 missing_cell_type_markers <- markers
-marker_index_rem <- which(names(markers$cell_types) == cell_type_to_rem)
+marker_index_rem <- which(names(markers$cell_types) %in% cell_type_to_rem)
 missing_cell_type_markers$cell_types <- markers$cell_types[marker_index_rem]
 
 sce <- readRDS(snakemake@input$sce)
@@ -52,17 +57,16 @@ features <- create_features(sce)
 selected_cells_rem_cell_type <- get_training_type_rem(features$expression, 
                                                       snakemake@wildcards$initial, 
                                                       markers,
+                                                      cell_type_to_rem,
                                                       needed_cells = as.integer(snakemake@wildcards$num))
 
 # Adds the cell type labels
 missing_cell_type_PCA <- left_join(features$PCA, selected_cells_rem_cell_type)
 
-
 rem_cell_type_probs <- get_AL_probs(
   select(missing_cell_type_PCA, -gt_cell_type, -iteration),
   snakemake@wildcards$AL_alg
 )
-
 
 ### KEPT CELL TYPE #####
 # Find all the cells of the type removed above that would otherwise have been selected 

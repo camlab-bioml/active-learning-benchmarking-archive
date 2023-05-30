@@ -32,16 +32,19 @@ sce <- readRDS(snakemake@input$sce)
 
 # Create PCA embedding and filtered expression
 features <- create_features(sce)
-
+save.image("debug-rem-cell-type.RData")
 ### REMOVED CELL TYPE #####
 # Create initial training set with removed cell type
 selected_cells_rem_cell_type <- get_training_type_rem(features$expression, 
                                                       snakemake@wildcards$initial, 
                                                       markers,
                                                       cell_type_to_rem,
-                                                      needed_cells = as.integer(snakemake@wildcards$num))
+                                                      as.integer(snakemake@wildcards$num))
 
-print(dim(selected_cells_rem_cell_type))
+if(nrow(selected_cells_rem_cell_type) != as.integer(snakemake@wildcards$num)){
+  stop("Number of cells selected is not equal to the number of cells requested")
+}
+
 # Adds the cell type labels
 missing_cell_type_PCA <- left_join(features$PCA, selected_cells_rem_cell_type)
 
@@ -66,8 +69,12 @@ selected_cells_kept_df <- get_training_type_kept(features$expression, cell_type_
                                                  snakemake@wildcards$initial, 
                                                  missing_cell_type_markers, 
                                                  selected_cells_rem_cell_type)
-print(dim(selected_cells_kept_df[[1]]))
 
+num_cells <- lapply(selected_cells_kept_df, nrow) |>
+  unlist()
+if(any(num_cells != as.integer(snakemake@wildcards$num))){
+  stop("Number of cells selected is not equal to the number of cells requested")
+}
 # Run active learning with kept cell type
 # Runs three times with 1, 2 and 3 cells of the removed type
 kept_cells_uncertainty <- lapply(selected_cells_kept_df, function(x){
@@ -97,14 +104,6 @@ uncertainties <- bind_rows(
   mutate(params = paste0("AL_alg-", snakemake@wildcards$AL_alg, "-strat-",
                          snakemake@wildcards$strat, "-init-", 
                          snakemake@wildcards$initial, "-rem_celltype-",
-                         paste0(cell_type_to_rem, collapse = "\n"), "-seed-", snakemake@wildcards$s))
-
+                         paste0(cell_type_to_rem, collapse = ", "), "-seed-", snakemake@wildcards$s))
 
 write_tsv(uncertainties, snakemake@output$tsv)
-
-
-
-
-
-
-

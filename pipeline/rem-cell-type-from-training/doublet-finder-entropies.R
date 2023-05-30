@@ -3,10 +3,10 @@ suppressPackageStartupMessages({
 })
 source("pipeline/whatsthatcell-helpers.R")
 
-doublets1 <- read_tsv("output/v6/results/doublet-id/scRNASeq-doublet-id-10x Chromium (v2) A.tsv")
+doublets1 <- read_tsv(snakemake@input$doublets1)
 colnames(doublets1)[2:3] <- c("score", "classification")
 
-doublets2 <- read_tsv("output/v6/results/doublet-id/scRNASeq-doublet-id-10x Chromium (v2) B.tsv")
+doublets2 <- read_tsv(snakemake@input$doublets2)
 colnames(doublets2)[2:3] <- c("score", "classification")
 
 doublets <- bind_rows(
@@ -14,8 +14,7 @@ doublets <- bind_rows(
   doublets2
 )
 
-files <- list.files("output/v6/results/rem_cell_type/", full.names = TRUE)
-entropies <- lapply(files, read_tsv) |> 
+entropies <- lapply(snakemake@input$entropies, read_tsv) |> 
   bind_rows() |> 
   mutate(al = case_when(grepl('AL_alg-multinom', params) ~ "multinom",
                       grepl('AL_alg-rf', params) ~ 'rf'),
