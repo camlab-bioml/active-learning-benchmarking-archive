@@ -1,7 +1,8 @@
 
 
 similarity = {
-    'heatmaps': expand(output + 'figures/cell-type-similarity/similarity-heatmap-{modality}-seed-{s}.pdf', modality = modalities, s = train_test_seeds),
+    #'heatmaps': expand(output + 'figures/cell-type-similarity/similarity-heatmap-{modality}-seed-{s}.pdf', modality = modalities, s = train_test_seeds),
+    #'cellline': output + 'figures/cell-type-similarity/similarity-heatmap-scRNASeq-cellLines.pdf',
     'tsvs': expand(output + 'results/cell-type-similarity/similarity-{modality}-seed-{s}.tsv', modality = modalities, s = train_test_seeds),
     'mean': expand(output + 'results/cell-type-similarity/average-similarity-{modality}.tsv', modality = modalities)
 }
@@ -13,6 +14,18 @@ rule calculate_cosine_dist:
     output:
         heatmap = output + 'figures/cell-type-similarity/similarity-heatmap-{modality}-seed-{s}.pdf',
         tsv = output + 'results/cell-type-similarity/similarity-{modality}-seed-{s}.tsv'
+    script:
+        'cell-type-similarity/calculate-cosine-distance.R'
+
+rule cell_line_dists:
+    input:
+        sce = 'data/scRNA-cell-lines/scRNASeq-cellLines.rds'
+    params:
+        pca = 'scater' 
+    resources: mem_mb=100000
+    output:
+        heatmap = output + 'figures/cell-type-similarity/similarity-heatmap-scRNASeq-cellLines.pdf',
+        tsv = output + 'results/cell-type-similarity/similarity-scRNASeq-cellLines.tsv'
     script:
         'cell-type-similarity/calculate-cosine-distance.R'
 

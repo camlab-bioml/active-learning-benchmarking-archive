@@ -9,32 +9,45 @@ source("pipeline/whatsthatcell-helpers.R")
 
 
 sce <- readRDS(snakemake@input$sce)
-if(is.null(sce$CellType)){
-  sce$CellType <- sce$cell_type
+
+if(!is.null(snakemake@params$pca)){
+  df_PCA <- reducedDim(sce, "PCA")
+  var_explained <- tibble(
+    PC = colnames(df_PCA),
+    `Proportion of Variance` = attr(reducedDim(sce, "PCA"), "percentVar")
+  )
+
+  df_PCA <- df_PCA[,1:20] |>
+    as.data.frame() |>
+    mutate(cell_type = sce$CellType)
+  var_explained <- var_explained[1:20, ]
+}else{
+  if(is.null(sce$CellType)){
+    sce$CellType <- sce$cell_type
+  }
+
+  df_expression <- load_scs(sce) |> 
+    select(-X1)
+
+  # Remove genes with 0 expression
+  expression <- df_expression[, colSums(df_expression) > 0]
+  # Run PCA
+  df_PCA <- as.matrix(expression) |> 
+    prcomp(center = TRUE, scale. = TRUE)
+
+  # Get variance explained
+  var_explained <- summary(df_PCA)$importance |> 
+    t() |>
+    as.data.frame() |> 
+    rownames_to_column("PC") |> 
+    select(PC, "Proportion of Variance") 
+  var_explained <- var_explained[1:20,]
+
+  # Get PCA embedding
+  df_PCA <- df_PCA$x[,1:20] |> 
+    as.data.frame() |> 
+    mutate(cell_type = sce$CellType)
 }
-
-df_expression <- load_scs(sce) |> 
-  select(-X1)
-
-# Remove genes with 0 expression
-expression <- df_expression[, colSums(df_expression) > 0]
-
-# Run PCA
-df_PCA <- as.matrix(expression) |> 
-  prcomp(center = TRUE, scale. = TRUE)
-
-# Get variance explained
-var_explained <- summary(df_PCA)$importance |> 
-  t() |>
-  as.data.frame() |> 
-  rownames_to_column("PC") |> 
-  select(PC, "Proportion of Variance") 
-var_explained <- var_explained[1:20,]
-
-# Get PCA embedding
-df_PCA <- df_PCA$x[,1:20] |> 
-  as.data.frame() |> 
-  mutate(cell_type = sce$CellType)
 
 celltypes <- unique(df_PCA$cell_type)
 
