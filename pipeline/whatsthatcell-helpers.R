@@ -486,6 +486,7 @@ get_cross_cohort_mean_ranked_estimate <- function(acc){
 ### Functions
 al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NULL){
   sel_acc <- filter(acc, corrupted == 0) |> 
+    filter(AL_alg == active_learner | is.na(AL_alg)) |> 
     filter(rand == 0 | is.na(rand)) |> 
     filter(.metric == metric) |> 
     filter(initial == initial_sel | is.na(initial))
@@ -494,15 +495,41 @@ al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NUL
   method_order <- get_cross_cohort_mean_ranked_estimate(cross_cohort_ranks) |> 
     pull(selection_procedure)
   
+  # p <- sel_acc |> 
+  #   group_by(selection_procedure, cell_num, cohort) |> 
+  #   mutate(selection_procedure = factor(selection_procedure, levels = method_order),
+  #          mean_estimate = mean(.estimate),
+  #          lower_quant = quantile(na.omit(.estimate), 0.25),
+  #          upper_quant = quantile(na.omit(.estimate), 0.75)) |> 
+  #   ggplot() +
+  #   #aes(x = as.character(cell_num), y = .estimate, fill = selection_procedure) +
+  #   #geom_boxplot() +
+  #   geom_segment(aes(x = as.character(cell_num), xend = as.character(cell_num),
+  #                    y = lower_quant, yend = upper_quant)) +
+  #   geom_point(aes(x = as.character(cell_num), y = .estimate, colour = selection_procedure)) +
+  #   scale_fill_manual(values = sel_meth_cols) +
+  #   whatsthatcell_theme() +
+  #   facet_wrap(~cohort, scales = "free_y", nrow = 1) +
+  #   labs(title = metric) +
+  #   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
   p <- sel_acc |> 
-    mutate(selection_procedure = factor(selection_procedure, levels = method_order)) |> 
+    group_by(selection_procedure, cell_num, cohort) |> 
+    mutate(selection_procedure = factor(selection_procedure, levels = method_order),
+           median_estimate = median(na.omit(.estimate)),
+           lower_quant = quantile(na.omit(.estimate), 0.25),
+           upper_quant = quantile(na.omit(.estimate), 0.75)) |> 
+    ungroup() |> 
     ggplot() +
-    aes(x = as.character(cell_num), y = .estimate, fill = selection_procedure) +
-    geom_boxplot() +
-    scale_fill_manual(values = sel_meth_cols) +
+    aes() +
+    geom_segment(aes(x = as.character(cell_num), group = selection_procedure,
+                     y = lower_quant, yend = upper_quant),
+                 position = position_dodge(width = 0.9)) +
+    geom_point(aes(x = as.character(cell_num), y = median_estimate, colour = selection_procedure),
+               position = position_dodge(width = 0.9)) +
+    scale_color_manual(values = sel_meth_cols) +
     whatsthatcell_theme() +
     facet_wrap(~cohort, scales = "free_y", nrow = 1) +
-    labs(title = metric) +
+    labs(title = metric, y = ".estimate", colour = "Selection method") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
   
   if(!is.null(n_cells)){
@@ -528,8 +555,7 @@ full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
   (f1 + theme(legend.position = "none")) / 
   (kap + theme(legend.position = "none")) /
   (mcc + theme(legend.position = "none")) / 
-  (sens + theme(legend.position = "bottom"))) +
-    plot_annotation(title = title)
+  (sens + theme(legend.position = "bottom")))
 }
 
 ### [ PLOTTING ] ####
