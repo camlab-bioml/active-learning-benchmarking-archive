@@ -8,6 +8,12 @@ suppressPackageStartupMessages({
 })
 source("pipeline/whatsthatcell-helpers.R")
 
+
+### [ FIGURE 1A - BENCHMARKING OVERVIEW ] #####
+schematic <- image_read("illustrator-figures/benchmarking-schematic.ai") |> 
+  image_ggplot()
+
+### [ FIGURE 1B - DATASET COMPOSOTION ] #####
 set.seed(42)
 
 CyTOF <- readRDS("data/CyTOF/CyTOF-full.rds")
@@ -64,12 +70,10 @@ cytof_bar <- CyTOF$cell_type |>
   geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 400),
             position = position_stack(vjust = 1.03)) +
   scale_fill_manual(values = cell_type_colours("CyTOF", FALSE)) +
-  ylim(0, 6300) +
+  ylim(0, 2800) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
-        #legend.position = "bottom",
-        #legend.title = element_blank(),
         axis.ticks.x = element_blank())
 
 cytof_plot <- (wrap_elements(full = cytof_tsne, ignore_tag = TRUE) & labs(title = "CyTOF")) /
@@ -79,8 +83,8 @@ cytof_plot <- (wrap_elements(full = cytof_tsne, ignore_tag = TRUE) & labs(title 
 
 ### scRNASeq
 scrna_tsne <- plot_dim_red(scRNA, "scRNASeq", TRUE,
-                           a1_start = -38, a1_end = -30, a1_y = -30,
-                           a2_start = -30, a2_end = -22, a2_x = -38, 
+                           a1_start = -41, a1_end = -33, a1_y = -47,
+                           a2_start = -47, a2_end = -38, a2_x = -41, 
                            l_nrow = 5)
 
 scrna_bar <- scRNA$CellType |> 
@@ -95,7 +99,6 @@ scrna_bar <- scRNA$CellType |>
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
-        #legend.position = "none",
         axis.ticks.x = element_blank())
 
 
@@ -127,47 +130,12 @@ snrna_plot <- ((wrap_elements(full = snrna_tsne, ignore_tag = TRUE) & labs(title
                  snrna_bar) + 
   plot_layout(heights = c(3,1))
 
-### [ ILLUSTRATOR SCHEMATIC ] #####
-schematic <- image_read("illustrator-figures/benchmarking-schematic.ai") |> 
-  image_ggplot()
-
-
-### [ ACCURACIES ] ####
-f <- list.files("output/v7/results/", pattern = "overall", full.names = TRUE)
-
-acc <- lapply(f, function(x){
-  df <- read_tsv(x) |> 
-    mutate(cohort = case_when(grepl("CyTOF", basename(x)) ~ "CyTOF",
-                              grepl("snRNASeq", basename(x)) ~ "snRNASeq",
-                              grepl("scRNASeq", basename(x)) ~ "scRNASeq"))
-  df
-}) |> 
-  bind_rows() |> 
-  mutate(cohort = factor(cohort, levels = c("scRNASeq", "snRNASeq", "CyTOF")),
-         selection_procedure = case_when(selection_procedure == "random" ~ "Random",
-                                         selection_procedure == "NoMarkerSeurat_clustering" ~ "No Marker AR",
-                                         selection_procedure == "MarkerSeurat_clustering" ~ "Marker AR",
-                                         selection_procedure == "highest-entropy-AL" ~ "Highest-entropy-AL",
-                                         selection_procedure == "lowest-maxp-AL" ~ "Lowest-maxp-AL",
-                                         TRUE ~ selection_procedure))
-
-
-sel_meth_cols <- hue_pal()(9)
-names(sel_meth_cols) <- unique(acc$selection_procedure)
-
-eval <- full_acc_plot_wrapper(acc, "rf", "ranking", "Investigating performance of cell selection methods") &
-  #theme(legend.position = "bottom") &
-  labs(fill = "Selection method")
-
-f1 <- wrap_elements((scrna_plot | snrna_plot | cytof_plot) + plot_layout(widths = c(1, 1.2, 1))) /
-  wrap_elements(schematic) /
-  wrap_elements(eval) + 
-  plot_layout(heights = c(0.9, 0.4, 1.2)) +
-  plot_annotation(tag_levels = 'A') &
-  theme(plot.tag = element_text(size = 22))
-
-
-pdf("output/v6/figures/figure1.pdf", width = 18, height = 23)
-  f1
+pdf("output/v8/paper-figures/figure1.pdf", height = 12.5, width = 17.5)
+  wrap_elements((scrna_plot | snrna_plot | cytof_plot) + plot_layout(widths = c(1, 1.2, 1))) /
+    wrap_elements(schematic) +
+    plot_layout(heights = c(2, 0.7)) +
+    plot_annotation(tag_levels = 'A') &
+    theme(plot.tag = element_text(size = 22))
 dev.off()
+
 
