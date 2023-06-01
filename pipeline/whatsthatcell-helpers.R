@@ -687,7 +687,7 @@ al_colours <- function(){
   c("LR" = "#DA94D4", "RF" = "#7EA3CC")
 }
 
-sel_met_cols <- hue_pal(9)
+sel_met_cols <- hue_pal()(9)
 names(sel_met_cols) <- c("AR Marker", "AR No Marker", "Random", "AL 0.05-maxp", "AL 0.25-maxp",
                          "AL 0.75-entropy", "AL 0.95-entropy", "AL Highest entropy", "AL Lowest maxp")
 
