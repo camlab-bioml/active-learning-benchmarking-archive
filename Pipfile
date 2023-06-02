@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 snakemake = "*"
 deeptools = "*"
+numpy = "*"
 
 [dev-packages]
 
