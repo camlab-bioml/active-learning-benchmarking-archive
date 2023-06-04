@@ -1,9 +1,10 @@
 library(tidyverse)
 library(scales)
+library(patchwork)
 
-sc_acc <- read_tsv("output/v8/imbalance/acc/imbalance-acc-scRNASeq.tsv")
-sn_acc <- read_tsv("output/v8/imbalance/acc/imbalance-acc-snRNASeq.tsv")
-cy_acc <- read_tsv("output/v8/imbalance/acc/imbalance-acc-CyTOF.tsv")
+sc_acc <- read_tsv(snakemake@input$scrna_acc)
+sn_acc <- read_tsv(snakemake@input$snrna_acc)
+cy_acc <- read_tsv(snakemake@input$cytof_acc)
 
 source("pipeline/whatsthatcell-helpers.R")
 
@@ -79,7 +80,7 @@ plotting_order <- filter(comb_imb_score, modality == "snRNASeq" & al == "RF" & i
   arrange(mean_estimate) |> 
   pull(strat)
 
-pdf("output/v8/paper-figures/imbalance-main-figure.pdf", height = 3, width = 7)
+pdf(snakemake@output$main_fig, height = 3, width = 7)
   filter(comb_imb_score, modality == "snRNASeq" & al == "RF" & init == "ranking") |> 
     mutate(strat = factor(strat, levels = plotting_order)) |> 
     ggplot(aes(x = comp, y = diff, fill = strat)) +
@@ -95,7 +96,7 @@ pdf("output/v8/paper-figures/imbalance-main-figure.pdf", height = 3, width = 7)
 dev.off()
 
 
-pdf("output/v8/paper-figures/imbalance-supplementary.pdf", height = 18, width = 9)
+pdf(snakemake@output$sup_fig, height = 18, width = 9)
   (scrnaseq / snrnaseq / cytof) + 
     plot_annotation(tag_levels = "A") + 
   plot_layout(guides = "collect", heights = c(2, 2, 1))

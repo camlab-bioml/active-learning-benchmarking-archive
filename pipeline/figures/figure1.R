@@ -10,17 +10,18 @@ source("pipeline/whatsthatcell-helpers.R")
 
 
 ### [ FIGURE 1A - BENCHMARKING OVERVIEW ] #####
-schematic <- image_read("illustrator-figures/benchmarking-schematic.ai") |> 
-  image_ggplot()
+# had to remove because magick causes issues with docker
+# schematic <- image_read(snakemake@input$schematic) |> 
+#   image_ggplot()
 
 ### [ FIGURE 1B - DATASET COMPOSOTION ] #####
 set.seed(42)
 
-CyTOF <- readRDS("data/CyTOF/CyTOF-full.rds")
+CyTOF <- readRDS(snakemake@input$cytof)
 CyTOF <- runTSNE(CyTOF)
-scRNA <- readRDS("data/scRNASeq/scRNASeq-full.rds")
+scRNA <- readRDS(snakemake@input$scrna)
 scRNA <- runTSNE(scRNA)
-snRNA <- readRDS("data/snRNASeq/snRNASeq-full.rds")
+snRNA <- readRDS(snakemake@input$snrna)
 snRNA <- runTSNE(snRNA)
 
 
@@ -130,10 +131,10 @@ snrna_plot <- ((wrap_elements(full = snrna_tsne, ignore_tag = TRUE) & labs(title
                  snrna_bar) + 
   plot_layout(heights = c(3,1))
 
-pdf("output/v8/paper-figures/figure1.pdf", height = 12.5, width = 17.5)
+pdf(snakemake@output$fig1, height = 9.25, width = 17.5)
   wrap_elements((scrna_plot | snrna_plot | cytof_plot) + plot_layout(widths = c(1, 1.2, 1))) /
-    wrap_elements(schematic) +
-    plot_layout(heights = c(2, 0.7)) +
+    #wrap_elements(schematic) +
+    #plot_layout(heights = c(2, 0.7)) +
     plot_annotation(tag_levels = 'A') &
     theme(plot.tag = element_text(size = 22))
 dev.off()

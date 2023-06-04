@@ -6,12 +6,11 @@ suppressPackageStartupMessages({
   library(scales)
   library(magick)
 })
+devtools::load_all("/ggplot2")
 source("pipeline/whatsthatcell-helpers.R")
 
 ### [ ACCURACIES ] ####
-f <- list.files("output/v8/results/", pattern = "overall", full.names = TRUE)
-
-acc <- lapply(f, function(x){
+acc <- lapply(snakemake@input$accs, function(x){
   df <- read_tsv(x) |> 
     mutate(cohort = case_when(grepl("CyTOF", basename(x)) ~ "CyTOF",
                               grepl("snRNASeq", basename(x)) ~ "snRNASeq",
@@ -34,13 +33,10 @@ acc <- lapply(f, function(x){
 
 sel_meth_cols <- sel_met_cols
 
-schematic <- image_read("illustrator-figures/AR-schematic.ai") |> 
-  image_ggplot()
-
 eval <- full_acc_plot_wrapper(acc, "rf", "ranking", "") &
   labs(fill = "Selection method")
 
-pdf("output/v8/paper-figures/figure3-overall-benchmark.pdf", height = 8.4, width = 9)
+pdf(snakemake@output$overall_fig, height = 8.4, width = 9)
   eval
 dev.off()
 

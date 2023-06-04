@@ -6,6 +6,9 @@ final_figures = {
     'fig3_acc': output + "paper-figures/overall-accuracies.pdf",
     'fig4': output + "paper-figures/rem-cell-type.pdf",
     'fig5': output + "paper-figures/pred-labelling.pdf",
+
+    # supplemental figures
+    'ar_params': output + "paper-figures/Supp-AR-res.pdf"
 }
 
 # Figure 1
@@ -64,11 +67,11 @@ rule overall_acc:
 
 
 # Figure 4
-rule rem_cell_types:
+rule paper_rem_cell_types:
     input:
         scrna = expand(output + "results/rem_cell_type/Init-sel-random-rem-{cell_line}-scRNASeq-highest_entropy-ALAlg-{al}-cell_num-20-seed-{s}.tsv", cell_line = ['JIMT1', 'AU565'], al = ['multinom', 'rf'], s = train_test_seeds),
         snrna = expand(output + "results/rem_cell_type/Init-sel-random-rem-{cell_type}-snRNASeq-highest_entropy-ALAlg-multinom-cell_num-20-seed-{s}.tsv", cell_type = ['Ductal', 'Endothelial', 'Schwann'], s = train_test_seeds),
-        snrna_group = expand(output + "results/rem_cell_type/Init-sel-random-rem-schwann_l1-snRNASeq-highest_entropy-ALAlg-multinom-cell_num-20-seed-{s}.tsv", s = train_test_seeds),
+        snrna_group = expand(output + "results/rem_cell_type_group/Init-sel-random-rem-schwann_l1-snRNASeq-highest_entropy-ALAlg-multinom-cell_num-20-seed-{s}.tsv", s = train_test_seeds),
         cytof = expand(output + "results/rem_cell_type/Init-sel-random-rem-{cell_type}-CyTOF-highest_entropy-ALAlg-multinom-cell_num-20-seed-{s}.tsv", cell_type = ['Classical Monocytes', 'CD8 T cells'], s = train_test_seeds),
         snrna_supp = expand(output + "results/rem_cell_type/Init-sel-random-rem-{cell_type}-snRNASeq-highest_entropy-ALAlg-rf-cell_num-20-seed-{s}.tsv", cell_type = ['Ductal', 'Endothelial', 'Schwann'], s = train_test_seeds),
         snrna_supp_group = expand(output + "results/rem_cell_type_group/Init-sel-random-rem-schwann_l1-snRNASeq-highest_entropy-ALAlg-rf-cell_num-20-seed-{s}.tsv", s = train_test_seeds),
@@ -96,23 +99,10 @@ rule self_training:
         sup_scrna = output + "paper-figures/Supp-scRNASeq-f1-improvement.pdf",
         sup_snrna = output + "paper-figures/Supp-snRNASeq-f1-improvement.pdf"
     script:
-        "figures/pred-labelling.R"
+        "figures/pred-labeling.R"
 
 
 #### Supplemental figs
-# similarity fig
-rule cell_type_sim:
-    input:
-        cytof_sim = output + "results/cell-type-similarity/similarity-CyTOF-seed-0.tsv",
-        scrna_sim = output + "results/cell-type-similarity/similarity-scRNASeq-seed-0.tsv",
-        snrna_sim = output + "results/cell-type-similarity/similarity-snRNASeq-seed-0.tsv"
-    output:
-        scrna = output + "paper-figures/Supp-cell-type-sim-scRNASeq.pdf",
-        snrna = output + "paper-figures/Supp-cell-type-sim-snRNASeq.pdf",
-        cytof = output + "paper-figures/Supp-cell-type-sim-CyTOF.pdf"
-    script:
-        "figures/cell-type-similarity.R"
-
 # ar params
 rule AR_params:
     input:

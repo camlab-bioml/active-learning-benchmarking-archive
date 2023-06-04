@@ -2,14 +2,15 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(ggalluvial)
   library(patchwork)
+  library(scales)
 })
 source("pipeline/whatsthatcell-helpers.R")
 
 ### PREDICTIVE LABELLING ACCURACY
-pred_lab_acc <- read_tsv("output/v8/new/pred-labeling-accuracy.tsv")
+pred_lab_acc <- read_tsv(snakemake@input$acc)
 
 # SUPPLEMENTAL FILE
-pdf("output/v8/paper-figures/Supp-pred-labelling-acc.pdf", height = 10, width = 12)
+pdf(snakemake@output$supp, height = 10, width = 12)
   pred_lab_acc |> 
     filter(.metric == "f_meas") |> 
     mutate(pred_sel = gsub("top", "", pred_sel),
@@ -66,16 +67,16 @@ pred_lab_acc_plot <- plot_pred_lab_acc(pred_lab_acc_pub, "CyTOF") |
 
 
 ## Benchmarking with predictive labelling data
-scrna <- read_tsv("output/v8/new/pred2/benchmark-predictive-labeling-scRNASeq.tsv") |> 
+scrna <- read_tsv(snakemake@input$scrna) |> 
   mutate(AL_alg = sub(".*-ALAlg-", "",  selection_procedure),
          selection_procedure = sub("-ALAlg-.*", "", selection_procedure),
          cohort = "scRNASeq")
-snrna <- read_tsv("output/v8/new/pred2/benchmark-predictive-labeling-snRNASeq.tsv") |> 
+snrna <- read_tsv(snakemake@input$snrna) |> 
   mutate(AL_alg = sub(".*-ALAlg-", "",  selection_procedure),
          selection_procedure = sub("-ALAlg-.*", "", selection_procedure),
          cohort = "snRNASeq")
 
-cytof <- read_tsv("output/v8/new/pred2/benchmark-predictive-labeling-CyTOF.tsv") |> 
+cytof <- read_tsv(snakemake@input$cytof) |> 
   mutate(AL_alg = sub(".*-ALAlg-", "",  selection_procedure),
          selection_procedure = sub("-ALAlg-.*", "", selection_procedure),
          cohort = "CyTOF")
@@ -135,12 +136,12 @@ comp_dataset <- acc_gap |>
   mutate(selection_procedure = case_when(selection_procedure == "random" ~ "Random",
                                          selection_procedure == "MarkerSeurat-clustering" ~ "AR Marker",
                                          selection_procedure == "NoMarkerSeurat-clustering" ~ "AR No Marker",
-                                         selection_procedure == "0.05-maxp-AL" ~ "AL 0.05 maxp",
-                                         selection_procedure == "0.25-maxp-AL" ~ "AL 0.25 maxp",
-                                         selection_procedure == "0.75-entropy-AL" ~ "AL 0.75 entropy",
-                                         selection_procedure == "0.95-entropy-AL" ~ "AL 0.95 entropy",
-                                         selection_procedure == "highest-entropy-AL" ~ "AL highest entropy",
-                                         selection_procedure == "lowest-maxp-AL" ~ "AL lowest maxp"))
+                                         selection_procedure == "0.05-maxp-AL" ~ "AL 0.05-maxp",
+                                         selection_procedure == "0.25-maxp-AL" ~ "AL 0.25-maxp",
+                                         selection_procedure == "0.75-entropy-AL" ~ "AL 0.75-entropy",
+                                         selection_procedure == "0.95-entropy-AL" ~ "AL 0.95-entropy",
+                                         selection_procedure == "highest-entropy-AL" ~ "AL Highest entropy",
+                                         selection_procedure == "lowest-maxp-AL" ~ "AL Lowest maxp"))
 
 plot_comp <- function(df, ncol, ylab = "", xlab = ""){
   if(ylab != ""){
@@ -152,6 +153,7 @@ plot_comp <- function(df, ncol, ylab = "", xlab = ""){
   df |> 
     ggplot(aes(x = gap, y = .estimate, colour = selection_procedure)) +
     geom_point() +
+    scale_color_manual(values = sel_met_cols) +
     labs(x = xlab,
          y = ylab,
          colour = "Selection procedure") +
@@ -178,9 +180,9 @@ gap_comb <- (cytof_gap | scrnaseq_gap | snrnaseq_gap) +
   plot_layout(guides = "collect", widths = c(0.65, 1, 1))
 
 # Detecting mislabelled cells
-cytof <- list.files("output/v8/identify_mislabelled/CyTOF/", full.names = TRUE)
-scrna <- list.files("output/v8/identify_mislabelled/scRNASeq/", full.names = TRUE)
-snrna <- list.files("output/v8/identify_mislabelled/snRNASeq/", full.names = TRUE)
+cytof <- snakemake@input$mislabelled_cytof
+scrna <- snakemake@input$mislabelled_scrna
+snrna <- snakemake@input$mislabelled_snrna
 
 mislabelled_pred <- lapply(c(cytof, scrna, snrna), function(x){
   df <- read_tsv(x)
@@ -206,7 +208,7 @@ mislabelled_pred_plot <- mislabelled_pred |>
   whatsthatcell_theme() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-pdf("output/v8/paper-figures/pred-labelling.pdf", height = 14, width = 12)
+pdf(snakemake@output$main, height = 14, width = 12)
   (wrap_elements(full = pred_lab_acc_plot + plot_layout(guides = "collect"))) /
     wrap_elements(full = lr_vs_rf & labs(title = "")) /
     wrap_elements(full = gap_comb) /
@@ -244,71 +246,71 @@ plot_sup_gap <- function(df, sel_cohort){
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 }
 
-pdf("output/v8/paper-figures/Supp-CyTOF-f1-improvement.pdf", width = 12, height = 8)
+pdf(snakemake@output$sup_cytof, width = 12, height = 8)
   plot_sup_gap(sup_acc_gap, "CyTOF")
 dev.off()
 
-pdf("output/v8/paper-figures/Supp-scRNASeq-f1-improvement.pdf", width = 12, height = 8)
+pdf(snakemake@output$sup_scrna, width = 12, height = 8)
   plot_sup_gap(sup_acc_gap, "scRNASeq")
 dev.off()
 
-pdf("output/v8/paper-figures/Supp-snRNASeq-f1-improvement.pdf", width = 12, height = 8)
+pdf(snakemake@output$sup_snrna, width = 12, height = 8)
   plot_sup_gap(sup_acc_gap, "snRNASeq")
 dev.off()
 
-### As function of number of cells predictively labelled
-test <- bind_rows(
-  select(pred_lab_acc, method, cell_selection, multinom) |> 
-    dplyr::rename(".estimate" = "multinom"),
-  baseline_acc
-) |> 
-  filter(cell_selection != "top200") |> 
-  mutate(cell_selection = factor(cell_selection, c("baseline", "top10", "top50", "top100"))) |> 
-  #filter(method == "Random-Forest,10,0.4,100,NA,0,MarkerSeurat-clustering,kap,NA,scRNASeq") |>
-  separate(method, c("alg", "knn", "res", "cell_num", "initial", "seed", 
-                     "selection_procedure", ".metric", "AL_alg", "cohort"), sep = ",",
-           remove = FALSE) |> 
-  filter(.metric == "sensitivity") |> 
-  filter(initial == "NA" | is.na(initial) | initial == "random") |> 
-  filter(AL_alg == "NA" | is.na(AL_alg) | AL_alg == "multinom")
+# ### As function of number of cells predictively labelled
+# test <- bind_rows(
+#   select(pred_lab_acc, method, cell_selection, multinom) |> 
+#     dplyr::rename(".estimate" = "multinom"),
+#   baseline_acc
+# ) |> 
+#   filter(cell_selection != "top200") |> 
+#   mutate(cell_selection = factor(cell_selection, c("baseline", "top10", "top50", "top100"))) |> 
+#   #filter(method == "Random-Forest,10,0.4,100,NA,0,MarkerSeurat-clustering,kap,NA,scRNASeq") |>
+#   separate(method, c("alg", "knn", "res", "cell_num", "initial", "seed", 
+#                      "selection_procedure", ".metric", "AL_alg", "cohort"), sep = ",",
+#            remove = FALSE) |> 
+#   filter(.metric == "sensitivity") |> 
+#   filter(initial == "NA" | is.na(initial) | initial == "random") |> 
+#   filter(AL_alg == "NA" | is.na(AL_alg) | AL_alg == "multinom")
   
-test |> 
-  filter(alg == "Random-Forest", selection_procedure == "random") |> 
-  ggplot(aes(x = cell_selection, y = .estimate, group = method, colour = cell_num)) +
-  geom_point() +
-  geom_line() +
-  facet_grid(selection_procedure ~ cohort + alg) +
-  whatsthatcell_theme()
+# test |> 
+#   filter(alg == "Random-Forest", selection_procedure == "random") |> 
+#   ggplot(aes(x = cell_selection, y = .estimate, group = method, colour = cell_num)) +
+#   geom_point() +
+#   geom_line() +
+#   facet_grid(selection_procedure ~ cohort + alg) +
+#   whatsthatcell_theme()
 
-left_join(pred_lab_acc, 
-          select(baseline_acc, -cell_selection), 
-          by = "method") |> 
-  #pivot_wider(names_from = "cell_selection", values_from = "multinom")
-  pivot_longer()
+# left_join(pred_lab_acc, 
+#           select(baseline_acc, -cell_selection), 
+#           by = "method") |> 
+#   #pivot_wider(names_from = "cell_selection", values_from = "multinom")
+#   pivot_longer()
 
-med_gap <- acc_gap |> 
-  filter(.metric == "f_meas") |> 
-  filter(initial == "NA" | is.na(initial) | initial == "random") |> 
-  filter(AL_alg == "NA" | is.na(AL_alg) | AL_alg == "multinom") |> 
-  group_by(method, cell_num, selection_procedure, cohort, cell_selection, pred_labeller) |> 
-  summarize(median_gap = median(na.omit(gap)))
+# med_gap <- acc_gap |> 
+#   filter(.metric == "f_meas") |> 
+#   filter(initial == "NA" | is.na(initial) | initial == "random") |> 
+#   filter(AL_alg == "NA" | is.na(AL_alg) | AL_alg == "multinom") |> 
+#   group_by(method, cell_num, selection_procedure, cohort, cell_selection, pred_labeller) |> 
+#   summarize(median_gap = median(na.omit(gap)))
 
-med_gap |> 
-  filter(pred_labeller == "multinom" & method ) |> 
-  ggplot(aes(x = cell_selection, y = median_gap, colour = cell_num)) +
-  geom_line() +
-  facet_grid(selection_procedure ~ cohort + method) +
-  whatsthatcell_theme()
+# med_gap |> 
+#   filter(pred_labeller == "multinom" & method ) |> 
+#   ggplot(aes(x = cell_selection, y = median_gap, colour = cell_num)) +
+#   geom_line() +
+#   facet_grid(selection_procedure ~ cohort + method) +
+#   whatsthatcell_theme()
 
 
-med_gap |> 
-  filter(cell_selection != "top200") |> 
-  mutate(cell_selection = factor(cell_selection, levels = c("top10", "top50", "top100"))) |> 
-  filter(pred_labeller == "multinom" & method == "CyTOF-LDA" & cell_num == 100, cohort == "CyTOF" &
-         selection_procedure == "0.05-maxp-AL") |> 
-  ggplot(aes(x = cell_selection, y = median_gap)) +
-  geom_point() 
-  #geom_line()# +
-  # facet_grid(selection_procedure ~ cohort + method) +
-  # whatsthatcell_theme()
+# med_gap |> 
+#   filter(cell_selection != "top200") |> 
+#   mutate(cell_selection = factor(cell_selection, levels = c("top10", "top50", "top100"))) |> 
+#   filter(pred_labeller == "multinom" & method == "CyTOF-LDA" & cell_num == 100, cohort == "CyTOF" &
+#          selection_procedure == "0.05-maxp-AL") |> 
+#   ggplot(aes(x = cell_selection, y = median_gap)) +
+#   geom_point() 
+#   #geom_line()# +
+#   # facet_grid(selection_procedure ~ cohort + method) +
+#   # whatsthatcell_theme()
 

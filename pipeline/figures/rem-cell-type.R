@@ -1,27 +1,13 @@
 suppressPackageStartupMessages({
   library(tidyverse)
   library(patchwork)
+  library(scales)
 })
 source("pipeline/whatsthatcell-helpers.R")
 
 # Read in data
 ### scRNASeq
-scrna <- c(
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-JIMT1*highest*multi*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-AU565*highest*multi*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-JIMT1*highest*rf*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-AU565*highest*rf*20*"),
-             full.names = TRUE)
-)
-
-scrna <- lapply(scrna, read_tsv) |> 
+scrna <- lapply(snakemake@input$scrna, read_tsv) |> 
   bind_rows() |> 
   mutate(al = case_when(grepl('rf', params) ~ "rf",
                         grepl('multinom', params) ~ "multinom"),
@@ -44,18 +30,8 @@ scrna_box <- scrna |>
 
 ### snRNASeq
 snrna <- c(
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-Ductal*highest*multi*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-Endothelial*highest*multi*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-Schwann*highest*multi*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type_group/",
-             pattern = glob2rx("*random*l1*sn*high*multi*num-20*"),
-             full.names = TRUE)
+  snakemake@input$snrna,
+  snakemake@input$snrna_group
 )
 
 snrna <- lapply(snrna, read_tsv) |> 
@@ -78,17 +54,7 @@ snrna_box <- snrna |>
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 ### Cytof
-cytof <- c(
-  list.files("output/v7/results/rem_cell_type",
-             pattern = glob2rx("*random*rem-Classical*CyTOF*highest*multi*20*"),
-             full.names = TRUE),
-  list.files("output/v7/results/rem_cell_type",
-             pattern = glob2rx("*random*CD8*CyTOF*highest*multi*20*"),
-             full.names = TRUE)
-)
-
-
-cytof <- lapply(cytof, read_tsv) |> 
+cytof <- lapply(snakemake@input$cytof, read_tsv) |> 
   bind_rows() |> 
   mutate(al = case_when(grepl('rf', params) ~ "rf",
                         grepl('multinom', params) ~ "multinom"),
@@ -107,7 +73,7 @@ cytof_box <- cytof |>
 
 
 ## Combine
-pdf("output/v8/paper-figures/rem-cell-type.pdf", height = 6, width = 14)
+pdf(snakemake@output$main, height = 6, width = 14)
 (scrna_box | snrna_box | cytof_box) +
   plot_layout(guides = "collect", widths = c(2, 2, 1)) +
   plot_annotation(tag_levels = "A") & 
@@ -118,18 +84,8 @@ dev.off()
 
 ## Supplemental for RF for snRNASeq and CyTOF
 snrna_sup <- c(
-  list.files("output/v8/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-Ductal*highest*rf*20*"),
-             full.names = TRUE),
-  list.files("output/v8/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-Endothelial*highest*rf*20*"),
-             full.names = TRUE),
-  list.files("output/v8/results/rem_cell_type/", 
-             pattern = glob2rx("Init-sel-random-rem-Schwann*highest*rf*20*"),
-             full.names = TRUE),
-  list.files("output/v8/results/rem_cell_type_group/",
-             pattern = glob2rx("*random*l1*sn*high*rf*num-20*"),
-             full.names = TRUE)
+  snakemake@input$snrna_supp,
+  snakemake@input$snrna_supp_group
 )
 
 snrna_sup <- lapply(snrna_sup, read_tsv) |> 
@@ -139,17 +95,8 @@ snrna_sup <- lapply(snrna_sup, read_tsv) |>
          params = gsub(".*rem_celltype-", "", params),
          params = gsub("-seed-[0-9]", "", params))
 
-cytof_sup <- c(
-  list.files("output/v8/results/rem_cell_type",
-             pattern = glob2rx("*random*rem-Classical*CyTOF*highest*rf*20*"),
-             full.names = TRUE),
-  list.files("output/v8/results/rem_cell_type",
-             pattern = glob2rx("*random*CD8*CyTOF*highest*rf*20*"),
-             full.names = TRUE)
-)
 
-
-cytof_sup <- lapply(cytof_sup, read_tsv) |> 
+cytof_sup <- lapply(snakemake@input$cytof_supp, read_tsv) |> 
   bind_rows() |> 
   mutate(al = case_when(grepl('rf', params) ~ "rf",
                         grepl('multinom', params) ~ "multinom"),
@@ -170,7 +117,6 @@ snrna_sup_box <- snrna_sup |>
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 
-
 cytof_sup_box <- cytof_sup |> 
   ggplot(aes(x = gt_cell_type, y = criterion_val, 
              fill = as.character(num_missing_cells))) +
@@ -181,7 +127,7 @@ cytof_sup_box <- cytof_sup |>
   whatsthatcell_theme() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-pdf("output/v8/paper-figures/supp-rem-cell-type.pdf", height = 6, width = 10)
+pdf(snakemake@output$supp, height = 6, width = 10)
   (snrna_sup_box | cytof_sup_box) +
     plot_layout(guides = "collect", widths = c(2, 1)) +
     plot_annotation(tag_levels = "A") & theme(legend.position = 'bottom')

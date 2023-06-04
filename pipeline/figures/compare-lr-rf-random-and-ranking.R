@@ -6,10 +6,11 @@ suppressPackageStartupMessages({
   library(magick)
   library(ggpubr)
 })
+devtools::load_all("/ggplot2")
 source("pipeline/whatsthatcell-helpers.R")
 
 ## Part A: Proportion of cells initially selected
-get_proportion_rep <- function(sce_path, selected_cells_path, cohort){
+get_proportion_rep <- function(sce_path, rand_files, rank_files, cohort){
   sce <- readRDS(sce_path)
   
   cell_types <- unique(sce$cell_type)
@@ -17,13 +18,6 @@ get_proportion_rep <- function(sce_path, selected_cells_path, cohort){
   if(is.null(cell_types)){
     cell_types <- unique(sce$CellType)
   }
-  
-  rand_files <- list.files(selected_cells_path, 
-                           pattern = "random",
-                           full.names = TRUE)
-  rank_files <- list.files(selected_cells_path, 
-                           pattern = "ranking",
-                           full.names = TRUE)
   
   random <- lapply(rand_files, function(x){
     sel_cells <- read_tsv(x) |>
@@ -48,14 +42,17 @@ get_proportion_rep <- function(sce_path, selected_cells_path, cohort){
 }
 
 props <- bind_rows(
-  get_proportion_rep("data/CyTOF/CyTOF-train-seed-0.rds", 
-                     "output/v8/data/CyTOF/Active-Learning_entropy/AL-batches-subset", 
+  get_proportion_rep(snakemake@input$cytof,
+                     snakemake@input$cytof_AL_rand,
+                     snakemake@input$cytof_AL_rank,
                      "CyTOF"),
-  get_proportion_rep("data/scRNASeq/scRNASeq-train-seed-0.rds", 
-                     "output/v8/data/scRNASeq/Active-Learning_entropy/AL-batches-subset", 
+  get_proportion_rep(snakemake@input$scrna,
+                     snakemake@input$scrna_AL_rand,
+                     snakemake@input$scrna_AL_rank,
                      "scRNASeq"),
-  get_proportion_rep("data/snRNASeq/snRNASeq-train-seed-0.rds", 
-                     "output/v8/data/snRNASeq/Active-Learning_entropy/AL-batches-subset", 
+  get_proportion_rep(snakemake@input$snrna,
+                     snakemake@input$snrna_AL_rand,
+                     snakemake@input$snrna_AL_rank,
                      "snRNASeq")
 )
 
@@ -72,11 +69,7 @@ prop <- props |>
 
 
 ## Part B: heatmaps
-f <- c("output/v8/results/overall-CyTOF-benchmarking-accuracies.tsv", 
-       "output/v8/results/overall-scRNASeq-benchmarking-accuracies.tsv", 
-       "output/v8/results/overall-snRNASeq-benchmarking-accuracies.tsv")
-
-acc <- lapply(f, function(x){
+acc <- lapply(snakemake@input$accs, function(x){
   df <- read_tsv(x) |> 
     mutate(cohort = case_when(grepl("CyTOF", basename(x)) ~ "CyTOF",
                               grepl("snRNASeq", basename(x)) ~ "snRNASeq",
@@ -149,7 +142,7 @@ ranking_vs_random <- create_heatmap(acc, "scRNASeq", "random_vs_ranked") +
 
 ranking <- draw(ranking_vs_random, column_title = "Selecting initial cells based on marker expression")
 
-pdf("output/v8/paper-figures/ranking-random-heatmap.pdf", height = 3.5, width = 7)
+pdf(snakemake@output$rank_rand_hm, height = 3.5, width = 7)
   ranking
 dev.off()
 
@@ -159,20 +152,20 @@ lr_vs_rf <- create_heatmap(acc, "scRNASeq", "lr_vs_rf") +
 
 lr_vs_rf <- draw(lr_vs_rf, column_title = "F1-score improvement by random forest compared to logistic regression")
 
-pdf("output/v8/paper-figures/lr-rf-heatmap.pdf", height = 3.5, width = 7)
+pdf(snakemake@output$lr_rf_hm, height = 3.5, width = 7)
   lr_vs_rf
 dev.off()
 
 ## Full main figure
-ranking <- image_read_pdf("output/v8/paper-figures/ranking-random-heatmap.pdf")
+ranking <- image_read_pdf(snakemake@output$rank_rand_hm)
 ranking <- ggplot() +
   background_image(ranking)
 
-lr_vs_rf <- image_read_pdf("output/v8/paper-figures/lr-rf-heatmap.pdf")
+lr_vs_rf <- image_read_pdf(snakemake@output$lr_rf_hm)
 lr_vs_rf <- ggplot() +
   background_image(lr_vs_rf)
 
-pdf("output/v8/paper-figures/lr-and-rf-heatmaps.pdf", height = 8.8, width = 7)
+pdf(snakemake@output$main_fig, height = 8.8, width = 7)
    (lr_vs_rf / wrap_elements(full = prop) / ranking) + plot_layout(heights = c(3, 1.2, 3)) + plot_annotation(tag_levels = "A")
 dev.off()
 
@@ -212,7 +205,7 @@ rf_vs_rf_ranking <- filter(acc, corrupted == 0) |>
   whatsthatcell_theme() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust =1))
 
-pdf("output/v8/paper-figures/rf-vs-lr-supplementary.pdf", height = 13, width = 12)
+pdf(snakemake@output$rf_lr_supp, height = 13, width = 12)
   rf_vs_rf_random / rf_vs_rf_ranking + plot_layout(guides = "collect") + 
     plot_annotation(tag_levels = "A")
 dev.off()
@@ -254,7 +247,7 @@ rand_vs_rank_rf <- filter(acc, corrupted == 0) |>
   whatsthatcell_theme() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust =1))
 
-pdf("output/v8/paper-figures/random-vs-ranking-supplementary.pdf", height = 13, width = 12)
+pdf(snakemake@output$rand_rank_supp, height = 13, width = 12)
   rand_vs_rank_lr / rand_vs_rank_rf + plot_layout(guides = "collect") + 
     plot_annotation(tag_levels = "A")
 dev.off()

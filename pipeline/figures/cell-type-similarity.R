@@ -1,9 +1,9 @@
 library(tidyverse)
 library(ComplexHeatmap)
 
-cytof_sim <- read_tsv("output/v7/results/cell-type-similarity/similarity-CyTOF-seed-0.tsv")
-scrna_sim <- read_tsv("output/v7/results/cell-type-similarity/similarity-scRNASeq-seed-0.tsv")
-snrna_sim <- read_tsv("output/v7/results/cell-type-similarity/similarity-snRNASeq-seed-0.tsv")
+cytof_sim <- read_tsv(snakemake@input$cytof_sim)
+scrna_sim <- read_tsv(snakemake@input$scrna_sim)
+snrna_sim <- read_tsv(snakemake@input$snrna_sim)
 
 plot_dist_mat <- function(df){
   pivot_wider(df, names_from = "cell_type2", values_from = "cosine_similarity") |> 
@@ -14,14 +14,14 @@ plot_dist_mat <- function(df){
     Heatmap(name = "Cosine\nsimilarity")
 }
 
-pdf("output/v7/paper-figures/Supp-cell-type-sim-scRNASeq.pdf", height = 5, width = 5.5)
+pdf(snakemake@input$scrna, height = 5, width = 5.5)
   plot_dist_mat(scrna_sim)
 dev.off()
 
-pdf("output/v7/paper-figures/Supp-cell-type-sim-snRNASeq.pdf", height = 5, width = 5.5)
+pdf(snakemake@input$snrna, height = 5, width = 5.5)
   plot_dist_mat(snrna_sim)
 dev.off()
 
-pdf("output/v7/paper-figures/Supp-cell-type-sim-CyTOF.pdf", height = 5, width = 5.5)
+pdf(snakemake@input$cytof, height = 5, width = 5.5)
   plot_dist_mat(cytof_sim)
 dev.off()

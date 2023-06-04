@@ -1,14 +1,15 @@
-suppressPackageStartupMessages(
+suppressPackageStartupMessages({
   library(tidyverse)
-)
+  library(patchwork)
+})
 source("pipeline/whatsthatcell-helpers.R")
 
 
-cytof_acc <- read_tsv("output/v7/results/overall-CyTOF-benchmarking-accuracies.tsv") |> 
+cytof_acc <- read_tsv(snakemake@input$cytof_acc) |> 
   mutate(cohort = "CyTOF")
-scrna_acc <- read_tsv("output/v7/results/overall-scRNASeq-benchmarking-accuracies.tsv") |> 
+scrna_acc <- read_tsv(snakemake@input$scrna_acc) |> 
   mutate(cohort = "scRNASeq")
-snrna_acc <- read_tsv("output/v7/results/overall-snRNASeq-benchmarking-accuracies.tsv") |> 
+snrna_acc <- read_tsv(snakemake@input$snrna_acc) |> 
   mutate(cohort = "snRNASeq")
 
 acc <- bind_rows(cytof_acc, scrna_acc, snrna_acc)
@@ -42,7 +43,7 @@ plot_knn_res <- function(acc, fill, cohort){
 }
 
 
-pdf("output/v7/paper-figures/supp-AR-res.pdf", height = 14, width = 9)
+pdf(snakemake@output$res, height = 14, width = 9)
   (plot_knn_res(cytof_acc, "res", "CyTOF") /
     plot_knn_res(scrna_acc, "res", "scRNASeq") /
     plot_knn_res(snrna_acc, "res", "snRNASeq")) +
@@ -50,7 +51,7 @@ pdf("output/v7/paper-figures/supp-AR-res.pdf", height = 14, width = 9)
 dev.off()
 
 
-pdf("output/v7/paper-figures/supp-AR-knn.pdf", height = 14, width = 9)
+pdf(snakemake@output$knn, height = 14, width = 9)
 (plot_knn_res(cytof_acc, "knn", "CyTOF") /
     plot_knn_res(scrna_acc, "knn", "scRNASeq") /
     plot_knn_res(snrna_acc, "knn", "snRNASeq")) +
