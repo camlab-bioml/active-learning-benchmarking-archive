@@ -4,6 +4,8 @@ import numpy as np
 import yaml
 from itertools import chain
 
+container: "docker://mgeuenich/al_eval_docker"
+
 configfile: 'config/config.yml'
 output = 'output/' + config['version'] + '/'
 
@@ -27,8 +29,8 @@ Seurat_resolution = [0.4,0.8,1.2]
 
 random_sets = ['set1']
 cell_numbers = [100, 250, 500]
-corruption_percentages = [0, 0.1, 0.2, 0.3, 1]
-random_percentages = [0, 0.25, 0.5, 0.75]
+corruption_percentages = [0]
+random_percentages = [0]
 
 
 # Get markers for each cohort
@@ -74,7 +76,16 @@ original_cell_types = {
 }
 
 selection_expansion_dict = {
-    'Seurat-clustering': {
+    'NoMarkerSeurat-clustering': {
+        'initial': 'NA',
+        'neighbors': Seurat_neighbors,
+        'res': Seurat_resolution,
+        'strategy': 'NA',
+        'AL_alg': 'NA',
+        'random_selection': [0],
+        'corruption': [0]
+    },
+    'MarkerSeurat-clustering': {
         'initial': 'NA',
         'neighbors': Seurat_neighbors,
         'res': Seurat_resolution,
@@ -102,8 +113,8 @@ selection_expansion_dict = {
         'corruption': corruption_percentages
     },
     'Active-Learning_maxp': {
-       'initial': initial_selections,
-       'neighbors': ['NA'],
+        'initial': initial_selections,
+        'neighbors': ['NA'],
         'res': ['NA'],
         'strategy': ['0.05_quant_maxp', '0.25_quant_maxp', 'lowest_maxp'],
         'AL_alg': AL_methods,
@@ -112,21 +123,25 @@ selection_expansion_dict = {
     }
 }
 
-#include: 'pipeline/process-data.smk'
+include: 'pipeline/process-data.smk'
 include: 'pipeline/cell-type-predictions.smk'
-#include: 'pipeline/simulate-active-learning.smk'
+include: 'pipeline/simulate-active-learning.smk'
 include: 'pipeline/visualizations.smk'
-#include: 'pipeline/predictive-labeling.smk'
 include: 'pipeline/imbalance.smk'
 include: 'pipeline/rem-cell-type.smk'
+include: 'pipeline/predictive-labeling2.smk'
+include: 'pipeline/cell-type-similarity.smk'
+include: 'pipeline/paper-figures.smk'
 
 rule all:
     input:
-        #process_data_output.values(),
-        #cell_type_predictions.values(),
-        #active_learner.values(),
-        #viz.values(),
-        #pred_lab.values(),
-        #imbalance.values(),
-        rem_cell_type.values()
+        process_data_output.values(),
+        [expand(x, s = train_test_seeds) for x in list(cell_type_predictions.values())],
+        active_learner.values(),
+        viz.values(),
+        imbalance.values(),
+        rem_cell_type.values(),
+        pred_lab2.values(),
+        similarity.values(),
+        final_figures.values()
 
