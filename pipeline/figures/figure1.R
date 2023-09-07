@@ -5,13 +5,14 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(scales)
   library(magick)
+  library(ggrepel)
 })
 source("pipeline/whatsthatcell-helpers.R")
 
 
 ### [ FIGURE 1A - BENCHMARKING OVERVIEW ] #####
 # had to remove because magick causes issues with docker
-# schematic <- image_read(snakemake@input$schematic) |> 
+# schematic <- image_read(snakemake@input$schematic) |>
 #   image_ggplot()
 
 ### [ FIGURE 1B - DATASET COMPOSOTION ] #####
@@ -24,6 +25,14 @@ scRNA <- runTSNE(scRNA)
 snRNA <- readRDS(snakemake@input$snrna)
 snRNA <- runTSNE(snRNA)
 
+scRNALung <- readRDS(snakemake@input$scRNALung)
+scRNALung <- runTSNE(scRNALung)
+
+tabulaLiver <- readRDS(snakemake@input$tabulaLiver)
+tabulaLiver <- runTSNE(tabulaLiver)
+
+tabulaVasc <- readRDS(snakemake@input@tabulaVasc)
+tabulaVasc <- runTSNE(tabulaVasc)
 
 plot_dim_red <- function(sce, mod, include_axis = FALSE,
                          a1_start = 0, a1_end = 0, a1_y = 0,
@@ -31,7 +40,7 @@ plot_dim_red <- function(sce, mod, include_axis = FALSE,
   if(!("CellType" %in% names(colData(sce)))){
     sce$CellType <- sce$cell_type
   }
-  p <- plotTSNE(sce, colour_by = 'CellType') +
+  p <- plotTSNE(sce, colour_by = 'CellType', point_alpha = 0.3) +
     scale_color_manual(values = cell_type_colours(mod, FALSE)) +
     coord_fixed() +
     theme(legend.position = "none",
@@ -62,30 +71,33 @@ plot_dim_red <- function(sce, mod, include_axis = FALSE,
 
 
 ### CYTOF
-cytof_tsne <- plot_dim_red(CyTOF, "CyTOF")
+cytof_tsne <- plot_dim_red(CyTOF, "CyTOF", TRUE,
+             a1_start = -37, a1_end = -27, a1_y = -29,
+             a2_start = -29, a2_end = -19, a2_x = -37)
 cytof_bar <- CyTOF$cell_type |> 
   table() |> 
   as.data.frame() |> 
   ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 400),
+  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 100,
+                angle = 45, hjust = 0, vjust = 0),
             position = position_stack(vjust = 1.03)) +
   scale_fill_manual(values = cell_type_colours("CyTOF", FALSE)) +
-  ylim(0, 2800) +
+  ylim(0, 3050) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 
 cytof_plot <- (wrap_elements(full = cytof_tsne, ignore_tag = TRUE) & labs(title = "CyTOF")) /
-  cytof_bar + plot_layout(heights = c(3,1))
+  cytof_bar + plot_layout(heights = c(3,1.5))
 
 
 
 ### scRNASeq
 scrna_tsne <- plot_dim_red(scRNA, "scRNASeq", TRUE,
-                           a1_start = -41, a1_end = -33, a1_y = -47,
-                           a2_start = -47, a2_end = -38, a2_x = -41, 
+                           a1_start = -38, a1_end = -28, a1_y = -33,
+                           a2_start = -33, a2_end = -23, a2_x = -38, 
                            l_nrow = 5)
 
 scrna_bar <- scRNA$CellType |> 
@@ -93,10 +105,11 @@ scrna_bar <- scRNA$CellType |>
   as.data.frame() |> 
   ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 50),
+  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 50,
+                angle = 45, hjust = 0, vjust = 0),
             position = position_stack(vjust = 1.01)) +
   scale_fill_manual(values = cell_type_colours("scRNASeq", FALSE)) +
-  ylim(0, 1650) +
+  ylim(0, 2250) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
@@ -116,14 +129,14 @@ snrna_bar <- snRNA$cell_type |>
   as.data.frame() |> 
   ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 400),
+  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 200,
+                angle = 45, hjust = 0, vjust = 0),
             position = position_stack(vjust = 1.03)) +
   scale_fill_manual(values = cell_type_colours("snRNASeq", FALSE)) +
-  ylim(0, 3500) +
+  ylim(0, 4200) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
-        #legend.position = "none",
         axis.ticks.x = element_blank())
 
 
@@ -131,12 +144,82 @@ snrna_plot <- ((wrap_elements(full = snrna_tsne, ignore_tag = TRUE) & labs(title
                  snrna_bar) + 
   plot_layout(heights = c(3,1))
 
-pdf(snakemake@output$fig1, height = 9.25, width = 17.5)
-  wrap_elements((scrna_plot | snrna_plot | cytof_plot) + plot_layout(widths = c(1, 1.2, 1))) /
-    #wrap_elements(schematic) +
-    #plot_layout(heights = c(2, 0.7)) +
-    plot_annotation(tag_levels = 'A') &
-    theme(plot.tag = element_text(size = 22))
-dev.off()
+## scRNALung
+scrna_lung_tsne <- plot_dim_red(scRNALung, "scRNALung")
 
+scRNALung_bar <- scRNALung$CellType |> 
+  table() |> 
+  as.data.frame() |> 
+  ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 50,
+                angle = 45, hjust = 0, vjust = 0),
+            position = position_stack(vjust = 1.03)) +
+  scale_fill_manual(values = cell_type_colours("scRNALung", FALSE)) +
+  ylim(0, 1800) +
+  labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
+  whatsthatcell_theme() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+scrna_lung_plot <- ((wrap_elements(full = scrna_lung_tsne, ignore_tag = TRUE) & labs(title = "scRNALung")) / 
+                      scRNALung_bar) + 
+  plot_layout(heights = c(3,1))
+
+## Tabula Liver
+tabulaLiver_tsne <- plot_dim_red(tabulaLiver, "tabulaLiver")
+
+tabulaLiver_bar <- tabulaLiver$CellType |> 
+  table() |> 
+  as.data.frame() |> 
+  ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 40,
+                angle = 45, hjust = 0, vjust = 0),
+            position = position_stack(vjust = 1.03)) +
+  scale_fill_manual(values = cell_type_colours("tabulaLiver", FALSE)) +
+  ylim(0, 2000) +
+  labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
+  whatsthatcell_theme() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+tabulaLiver_plot <- ((wrap_elements(full = tabulaLiver_tsne, ignore_tag = TRUE) & labs(title = "tabulaLiver")) / 
+                       tabulaLiver_bar) + 
+  plot_layout(heights = c(3,1.5))
+
+## Tabula Vasc
+tabulaVasc_tsne <- plot_dim_red(tabulaVasc, "tabulaVasc")
+
+tabulaVasc_bar <- tabulaVasc$CellType |> 
+  table() |> 
+  as.data.frame() |> 
+  ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 150, 
+                angle = 45, hjust = 0, vjust = 0),
+            position = position_stack(vjust = 1.03)) +
+  scale_fill_manual(values = cell_type_colours("tabulaVasc", FALSE)) +
+  ylim(0, 7200) +
+  labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
+  whatsthatcell_theme() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+tabulaVasc_plot <- ((wrap_elements(full = tabulaVasc_tsne, ignore_tag = TRUE) & labs(title = "tabulaVasc")) / 
+                      tabulaVasc_bar) + 
+  plot_layout(heights = c(3,1.5))
+
+
+## Combine figures
+row1 <- wrap_elements((scrna_plot | scrna_lung_plot | snrna_plot) + plot_layout(widths = c(1, 1.2, 1)))
+row2 <- wrap_elements((cytof_plot | tabulaLiver_plot | tabulaVasc_plot) + plot_layout(widths = c(1, 1.2, 1)))
+
+pdf(snakemake@output$fig1, height = 22, width = 17)
+wrap_elements(row1 / plot_spacer() / row2 + plot_layout(heights= c(1, 0.1, 1))) /
+  #wrap_elements(schematic) + 
+  #plot_layout(heights = c(5, 0.9)) +
+  plot_annotation(tag_levels = 'A') &
+  theme(plot.tag = element_text(size = 22))
+dev.off()
 

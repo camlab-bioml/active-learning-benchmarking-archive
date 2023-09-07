@@ -484,7 +484,7 @@ get_cross_cohort_mean_ranked_estimate <- function(acc){
 
 
 ### Functions
-al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NULL){
+al_selection <- function(acc, metric, active_learner, initial_sel, title, n_cells = NULL){
   sel_acc <- filter(acc, corrupted == 0) |> 
     filter(AL_alg == active_learner | is.na(AL_alg)) |> 
     filter(rand == 0 | is.na(rand)) |> 
@@ -529,7 +529,7 @@ al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NUL
     scale_color_manual(values = sel_meth_cols) +
     whatsthatcell_theme() +
     facet_wrap(~cohort, scales = "free_y", nrow = 1) +
-    labs(title = metric, y = ".estimate", colour = "Selection method") +
+    labs(title = title, y = ".estimate", colour = "Selection method") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
   
   if(!is.null(n_cells)){
@@ -545,11 +545,11 @@ al_selection <- function(acc, metric, active_learner, initial_sel, n_cells = NUL
 }
 
 full_acc_plot_wrapper <- function(acc, AL_alg, initial_sel, title){
-  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel)
-  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel)
-  kap <- al_selection(acc, "kap", AL_alg, initial_sel)
-  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel) 
-  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, n_cells = "Number of cells")
+  bal_acc <- al_selection(acc, "bal_accuracy", AL_alg, initial_sel, "Balanced accuracy")
+  f1 <- al_selection(acc, "f_meas", AL_alg, initial_sel, "F1-score")
+  kap <- al_selection(acc, "kap", AL_alg, initial_sel, "Kappa")
+  mcc <- al_selection(acc, "mcc", AL_alg, initial_sel, "Matthews correlation coefficient") 
+  sens <- al_selection(acc, "sensitivity", AL_alg, initial_sel, "Sensitivity", n_cells = "Number of cells")
   
   ((bal_acc + theme(legend.position = "none")) / 
   (f1 + theme(legend.position = "none")) / 
@@ -667,13 +667,54 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     "IgM- IgD- B-cells" = pal[13],
     "B-cell Frac A-C (pro-B cells)" = pal[2]
   )
+  
+  scRNALung_colours <- c(
+    "A549" = pal[1],
+    "H1975" = pal[2],
+    "H2228" = pal[7],
+    "H838" = pal[8],
+    "HCC827" = pal[12]
+  )
+  
+  tabulaLiver_colours <- c(
+    "endothelial cell" = pal[9],
+    "endothelial cell of hepatic sinusoid" = pal[13],
+    "erythrocyte" = pal[14],
+    "fibroblast" = pal[19],
+    "hepatocyte" = pal[3],
+    "intrahepatic cholangiocyte" = pal[18],
+    "liver dendritic cell" = pal[4],
+    "macrophage" = pal[8],
+    "monocyte" = pal[16],
+    "neutrophil" = pal[20],
+    "nk cell" = pal[10],
+    "plasma cell" = pal[2],
+    "t cell" = pal[12]
+  )
+  
+  tabulaVasc_colours <- c(
+    "artery endothelial cell" = pal[9],
+    "b cell" = pal[2],
+    "endothelial cell" = pal[13],
+    "epithelial cell" = pal[18],
+    "erythrocyte" = pal[14],
+    "fibroblast" = pal[19],
+    "lymphatic endothelial cell" = pal[15],
+    "macrophage" = pal[8],
+    "mast cell" = pal[11],
+    "nk cell" = pal[10],
+    "pericyte cell" = pal[3],
+    "plasma cell" = pal[20],
+    "smooth muscle cell" = pal[5],
+    "t cell" = pal[12]
+  )
 
   scRNALung_colours <- c(
-    "H838" = pal[2],
-    "H2228" = pal[6],
-    "H1975" = pal[5],
-    "HCC827" = pal[1],
-    "A549" = pal[3]
+    "A549" = pal[1],
+    "H1975" = pal[2],
+    "H2228" = pal[7],
+    "H838" = pal[8],
+    "HCC827" = pal[12]
   )
 
   tabulaLiver_colours <- c()
