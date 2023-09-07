@@ -175,9 +175,9 @@ fit_AL_classifier <- function(annotated_cells, AL_method){
   if(training_set_size < 50){
     bootstrap_reps <- 1000
   }else if(training_set_size >=50 | training_set_size < 100){
-    bootstrap_reps <- 50
+    bootstrap_reps <- 125
   }else{
-    bootstrap_reps <- 25
+    bootstrap_reps <- 100
   }
   tctrl <- trainControl(method = "boot", number = bootstrap_reps)
   ModelFit <- train(cell_type ~ ., 
@@ -668,10 +668,22 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     "B-cell Frac A-C (pro-B cells)" = pal[2]
   )
 
+  scRNALung_colours <- c(
+    "H838" = pal[2],
+    "H2228" = pal[6],
+    "H1975" = pal[5],
+    "HCC827" = pal[1],
+    "A549" = pal[3]
+  )
+
+  tabulaLiver_colours <- c()
+
   if(include_unassigned){
     scRNASeq_colours <- c(scRNASeq_colours, c('unassigned' = "grey60"))
     snRNASeq_colours <- c(snRNASeq_colours, c('unassigned' = "grey60"))
     CyTOF_colours <- c(CyTOF_colours, c('unassigned' = "grey60"))
+    scRNALung_colours <- c(scRNALung_colours, c('unassigned' = "grey60"))
+    tabulaLiver_colours <- c(tabulaLiver_colours, c('unassigned' = "grey60"))
   }
   
   if(modality == "scRNASeq"){
@@ -680,6 +692,10 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     snRNASeq_colours
   }else if(modality == "CyTOF"){
     CyTOF_colours
+  }else if(modality == "scRNALung"){
+    scRNALung_colours
+  }else if(modality == "tabulaLiver"){
+    tabulaLiver_colours
   }
 }
 
