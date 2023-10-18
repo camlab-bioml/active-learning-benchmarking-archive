@@ -5,6 +5,34 @@ suppressPackageStartupMessages({
 })
 source("pipeline/whatsthatcell-helpers.R")
 
+### Summary plots
+cytof <- read_tsv(snakemake@input$cytof_summary) |> 
+  mutate(cohort = "CyTOF")
+scrnaseq <- read_tsv(snakemake@input$scrna_summary) |> 
+  mutate(cohort = "scRNASeq")
+snrnaseq <- read_tsv(snakemake@input$snrna_summary) |> 
+  mutate(cohort = "snRNASeq")
+scrnalung <- read_tsv(snakemake@input$scrna_lung_summary) |> 
+  mutate(cohort = "scRNALung")
+liverAtlas <- read_tsv(snakemake@input$liver_summary) |> 
+  mutate(cohort = "liverAtlas")
+tabulavasc <- read_tsv(snakemake@input$vasc_summary) |> 
+  mutate(cohort = "tabulaVasc")
+
+summary <- bind_rows(cytof, scrnaseq, snrnaseq, scrnalung, liverAtlas, tabulavasc) |> 
+  mutate(AL_alg = case_when(AL_alg == "rf" ~ "RF",
+                            AL_alg == "multinom" ~ "LR")) |> 
+  ggplot(aes(as.factor(num_missing_cells), y = criterion_val, colour = gt_rem, group = gt_rem)) +
+  geom_point() +
+  geom_line() +
+  ylim(0, 1) +
+  scale_colour_manual(values = c("#ffa600", "#9763ff")) +
+  labs(x = "Number of missing cells", y = "Scaled median entropy") +
+  facet_grid(AL_alg ~ cohort) +
+  whatsthatcell_theme() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
 # Read in data
 ### scRNASeq
 scrna <- lapply(snakemake@input$scrna, read_tsv) |> 
@@ -73,11 +101,13 @@ cytof_box <- cytof |>
 
 
 ## Combine
-pdf(snakemake@output$main, height = 6, width = 14)
-(scrna_box | snrna_box | cytof_box) +
-  plot_layout(guides = "collect", widths = c(2, 2, 1)) +
-  plot_annotation(tag_levels = "A") & 
+entropies <- (scrna_box | snrna_box | cytof_box) +
+  plot_layout(guides = "collect", widths = c(2, 2, 1)) &
   theme(legend.position = 'bottom', plot.tag = element_text(size = 18))
+
+pdf(snakemake@output$main, height = 6, width = 14)
+  summary / entropies + 
+    plot_annotation(tag_levels = "A")
 dev.off()
 
 
