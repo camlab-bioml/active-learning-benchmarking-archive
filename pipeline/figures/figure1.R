@@ -27,10 +27,8 @@ snRNA <- runTSNE(snRNA)
 
 scRNALung <- readRDS(snakemake@input$scRNALung)
 scRNALung <- runTSNE(scRNALung)
-
-tabulaLiver <- readRDS(snakemake@input$tabulaLiver)
-tabulaLiver <- runTSNE(tabulaLiver)
-
+liverAtlas <- readRDS(snakemake@input$liverAtlas)
+liverAtlas <- runTSNE(liverAtlas)
 tabulaVasc <- readRDS(snakemake@input@tabulaVasc)
 tabulaVasc <- runTSNE(tabulaVasc)
 
@@ -69,11 +67,10 @@ plot_dim_red <- function(sce, mod, include_axis = FALSE,
 }
 
 
-
 ### CYTOF
 cytof_tsne <- plot_dim_red(CyTOF, "CyTOF", TRUE,
-             a1_start = -37, a1_end = -27, a1_y = -29,
-             a2_start = -29, a2_end = -19, a2_x = -37)
+             a1_start = -35, a1_end = -25, a1_y = -33,
+             a2_start = -33, a2_end = -23, a2_x = -35)
 cytof_bar <- CyTOF$cell_type |> 
   table() |> 
   as.data.frame() |> 
@@ -83,21 +80,22 @@ cytof_bar <- CyTOF$cell_type |>
                 angle = 45, hjust = 0, vjust = 0),
             position = position_stack(vjust = 1.03)) +
   scale_fill_manual(values = cell_type_colours("CyTOF", FALSE)) +
-  ylim(0, 3050) +
+  ylim(0, 2800) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 
-cytof_plot <- (wrap_elements(full = cytof_tsne, ignore_tag = TRUE) & labs(title = "CyTOF")) /
-  cytof_bar + plot_layout(heights = c(3,1.5))
+cytof_plot <- (wrap_elements(full = cytof_tsne, ignore_tag = TRUE) & 
+                 labs(title = "CyTOF - Bone marrow")) /
+  cytof_bar + plot_layout(heights = c(3,1.8))
 
 
 
 ### scRNASeq
 scrna_tsne <- plot_dim_red(scRNA, "scRNASeq", TRUE,
-                           a1_start = -38, a1_end = -28, a1_y = -33,
-                           a2_start = -33, a2_end = -23, a2_x = -38, 
+                           a1_start = -40, a1_end = -30, a1_y = -49,
+                           a2_start = -49, a2_end = -39, a2_x = -40, 
                            l_nrow = 5)
 
 scrna_bar <- scRNA$CellType |> 
@@ -116,7 +114,8 @@ scrna_bar <- scRNA$CellType |>
         axis.ticks.x = element_blank())
 
 
-scrna_plot <- ((wrap_elements(full = scrna_tsne, ignore_tag = TRUE) & labs(title = "scRNASeq")) /
+scrna_plot <- ((wrap_elements(full = scrna_tsne, ignore_tag = TRUE) & 
+                  labs(title = "scRNASeq - Breast cancer cell lines")) /
   scrna_bar) + 
   plot_layout(heights = c(3,1))
 
@@ -140,7 +139,8 @@ snrna_bar <- snRNA$cell_type |>
         axis.ticks.x = element_blank())
 
 
-snrna_plot <- ((wrap_elements(full = snrna_tsne, ignore_tag = TRUE) & labs(title = "snRNASeq")) / 
+snrna_plot <- ((wrap_elements(full = snrna_tsne, ignore_tag = TRUE) & 
+                  labs(title = "snRNASeq - Pancreas cancer")) / 
                  snrna_bar) + 
   plot_layout(heights = c(3,1))
 
@@ -162,14 +162,15 @@ scRNALung_bar <- scRNALung$CellType |>
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 
-scrna_lung_plot <- ((wrap_elements(full = scrna_lung_tsne, ignore_tag = TRUE) & labs(title = "scRNALung")) / 
+scrna_lung_plot <- ((wrap_elements(full = scrna_lung_tsne, ignore_tag = TRUE) & 
+                       labs(title = "scRNASeq - Lung cancer cell lines")) / 
                       scRNALung_bar) + 
   plot_layout(heights = c(3,1))
 
 ## Tabula Liver
-tabulaLiver_tsne <- plot_dim_red(tabulaLiver, "tabulaLiver")
+liverAtlas_tsne <- plot_dim_red(liverAtlas, "liverAtlas")
 
-tabulaLiver_bar <- tabulaLiver$CellType |> 
+liverAtlas_bar <- liverAtlas$CellType |> 
   table() |> 
   as.data.frame() |> 
   ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1)) +
@@ -177,16 +178,17 @@ tabulaLiver_bar <- tabulaLiver$CellType |>
   geom_text(aes(label = Freq, x = reorder(Var1, -Freq), y = Freq + 40,
                 angle = 45, hjust = 0, vjust = 0),
             position = position_stack(vjust = 1.03)) +
-  scale_fill_manual(values = cell_type_colours("tabulaLiver", FALSE)) +
-  ylim(0, 2000) +
+  scale_fill_manual(values = cell_type_colours("liverAtlas", FALSE)) +
+  ylim(0, 4200) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 
-tabulaLiver_plot <- ((wrap_elements(full = tabulaLiver_tsne, ignore_tag = TRUE) & labs(title = "tabulaLiver")) / 
-                       tabulaLiver_bar) + 
-  plot_layout(heights = c(3,1.5))
+liverAtlas_plot <- ((wrap_elements(full = liverAtlas_tsne, ignore_tag = TRUE) & 
+                       labs(title = "scRNASeq - Liver")) / 
+                       liverAtlas_bar) + 
+  plot_layout(heights = c(3,1.8))
 
 ## Tabula Vasc
 tabulaVasc_tsne <- plot_dim_red(tabulaVasc, "tabulaVasc")
@@ -200,26 +202,24 @@ tabulaVasc_bar <- tabulaVasc$CellType |>
                 angle = 45, hjust = 0, vjust = 0),
             position = position_stack(vjust = 1.03)) +
   scale_fill_manual(values = cell_type_colours("tabulaVasc", FALSE)) +
-  ylim(0, 7200) +
+  ylim(0, 7000) +
   labs(x = "Cell type", y = "Number of cells", fill = "Cell type") +
   whatsthatcell_theme() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 
-tabulaVasc_plot <- ((wrap_elements(full = tabulaVasc_tsne, ignore_tag = TRUE) & labs(title = "tabulaVasc")) / 
+tabulaVasc_plot <- ((wrap_elements(full = tabulaVasc_tsne, ignore_tag = TRUE) & 
+                       labs(title = "scRNASeq - Vasculature")) / 
                       tabulaVasc_bar) + 
-  plot_layout(heights = c(3,1.5))
+  plot_layout(heights = c(3,1.8))
 
 
 ## Combine figures
 row1 <- wrap_elements((scrna_plot | scrna_lung_plot | snrna_plot) + plot_layout(widths = c(1, 1.2, 1)))
-row2 <- wrap_elements((cytof_plot | tabulaLiver_plot | tabulaVasc_plot) + plot_layout(widths = c(1, 1.2, 1)))
+row2 <- wrap_elements((cytof_plot | liverAtlas_plot | tabulaVasc_plot) + plot_layout(widths = c(1, 1.2, 1)))
 
-pdf(snakemake@output$fig1, height = 22, width = 17)
-wrap_elements(row1 / plot_spacer() / row2 + plot_layout(heights= c(1, 0.1, 1))) /
-  #wrap_elements(schematic) + 
-  #plot_layout(heights = c(5, 0.9)) +
-  plot_annotation(tag_levels = 'A') &
-  theme(plot.tag = element_text(size = 22))
+pdf(snakemake@output$fig1, height = 18, width = 17)
+  wrap_elements(row1 / plot_spacer() / row2 + plot_layout(heights= c(1, 0.05, 1))) /
+    theme(plot.tag = element_text(size = 22))
 dev.off()
 

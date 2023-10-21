@@ -676,20 +676,22 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     "HCC827" = pal[12]
   )
   
-  tabulaLiver_colours <- c(
-    "endothelial cell" = pal[9],
-    "endothelial cell of hepatic sinusoid" = pal[13],
-    "erythrocyte" = pal[14],
-    "fibroblast" = pal[19],
-    "hepatocyte" = pal[3],
-    "intrahepatic cholangiocyte" = pal[18],
-    "liver dendritic cell" = pal[4],
-    "macrophage" = pal[8],
-    "monocyte" = pal[16],
-    "neutrophil" = pal[20],
-    "nk cell" = pal[10],
-    "plasma cell" = pal[2],
-    "t cell" = pal[12]
+  liverAtlas_colours <- c(
+    "Endothelial cells" = pal[9],
+    #"endothelial cell of hepatic sinusoid" = pal[13],
+    "Basophils" = pal[14],
+    "Fibroblasts" = pal[19],
+    "Hepatocytes" = pal[3],
+    "Cholangiocytes" = pal[18],
+    "Dendritic cells" = pal[4],
+    "Macrophages" = pal[8],
+    "Mono+mono derived cells" = pal[16],
+    "Neutrophils" = pal[13],
+    "Resident NK" = pal[10],
+    "Plasma cells" = pal[2],
+    "T cells" = pal[12],
+    "B cells" = pal[11],
+    "pDCs" = pal[20]
   )
   
   tabulaVasc_colours <- c(
@@ -717,14 +719,13 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     "HCC827" = pal[12]
   )
 
-  tabulaLiver_colours <- c()
-
   if(include_unassigned){
     scRNASeq_colours <- c(scRNASeq_colours, c('unassigned' = "grey60"))
     snRNASeq_colours <- c(snRNASeq_colours, c('unassigned' = "grey60"))
     CyTOF_colours <- c(CyTOF_colours, c('unassigned' = "grey60"))
     scRNALung_colours <- c(scRNALung_colours, c('unassigned' = "grey60"))
-    tabulaLiver_colours <- c(tabulaLiver_colours, c('unassigned' = "grey60"))
+    liverAtlas_colours <- c(liverAtlas_colours, c('unassigned' = "grey60"))
+    tabulaVasc_colours <- c(tabulaVasc_colours, c('unassigned' = "grey60"))
   }
   
   if(modality == "scRNASeq"){
@@ -735,8 +736,10 @@ cell_type_colours <- function(modality, include_unassigned = TRUE) {
     CyTOF_colours
   }else if(modality == "scRNALung"){
     scRNALung_colours
-  }else if(modality == "tabulaLiver"){
-    tabulaLiver_colours
+  }else if(modality == "liverAtlas"){
+    liverAtlas_colours
+  }else if(modality == "tabulaVasc"){
+    tabulaVasc_colours
   }
 }
 
